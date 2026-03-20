@@ -1,0 +1,290 @@
+<resources>
+    <string name="app_name">MafiMushkil</string>
+    <string name="mafi_mushkil">Mafi\nMushkil</string>
+    <string name="app_logo_desc">App Logo</string>
+    <string name="pixel_io">Pixel IO</string>
+    <string name="technologies">Technologies</string>
+    <string name="pixel_io_desc">Pixel IO Technologies</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_title">Best Hands\nfor Help</string>
+    <string name="welcome_subtitle">With our on-demand service app, we\nbring you better services.</string>
+    <string name="get_started">Get Started</string>
+    <string name="worker_image_desc">Worker</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title1">Choose a Service</string>
+    <string name="onboarding_desc1">Find the right service for your needs easily, with a variety of options available at your fingertips.</string>
+    <string name="onboarding_title2">Get a Quote</string>
+    <string name="onboarding_desc2">Request price estimates from professionals to help you make informed decisions with ease.</string>
+    <string name="onboarding_title3">Get the Job Done</string>
+    <string name="onboarding_desc3">Relax while skilled experts handle your tasks efficiently, ensuring the job is done perfectly.</string>
+    <string name="skip">Skip</string>
+    <string name="next">Next</string>
+    <string name="finish">Finish</string>
+
+    <!-- Security Verification -->
+    <string name="security_verification_title">Security Verification</string>
+    <string name="security_verification_subtitle">This is your first login from this device. To ensure your account security, please verify your identity.</string>
+    <string name="start_to_verify">Start to Verify</string>
+
+    <!-- Phone Verification -->
+    <string name="phone_verification_title">Enter your phone number\nfor verification</string>
+    <string name="phone_verification_update_title">Enter new phone number\nfor verification</string>
+    <string name="phone_number_label">Phone Number</string>
+    <string name="verify">Verify</string>
+    <string name="send_code">Send Code</string>
+    <string name="close">Close</string>
+
+    <!-- OTP Verification -->
+    <string name="otp_title">Enter Code to Continue</string>
+    <string name="otp_subtitle">Verification code has been sent to %1$s via SMS.</string>
+    <string name="otp_placeholder">Enter code here</string>
+    <string name="resend_code">Resend Code</string>
+    <string name="resend_timer">Resend code in %1$d seconds</string>
+    <string name="phone_updated">Phone number updated!</string>
+    <string name="verification_successful">Verification Successful</string>
+    <string name="ok">OK</string>
+    <string name="back">Back</string>
+
+    <!-- Home Screen -->
+    <string name="home_search_placeholder">I want to hire...</string>
+    <string name="home_services_title">Services</string>
+    <string name="home_more">More</string>
+    <string name="menu_desc">Menu</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_orders">Orders</string>
+    <string name="nav_promotions">Promos</string>
+    <string name="nav_notifications">Notifs</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Categories</string>
+    <string name="cat_cleaning">Cleaning</string>
+    <string name="cat_electrician">Electrician</string>
+    <string name="cat_plumber">Plumber</string>
+    <string name="cat_carpenter">Carpenter</string>
+
+    <!-- Menu Drawer -->
+    <string name="menu_profile">My profile</string>
+    <string name="menu_contact">Contact us</string>
+    <string name="menu_become_worker">Become worker</string>
+    <string name="menu_register_company">Register company</string>
+    <string name="menu_share">Share</string>
+    <string name="menu_rate">Rate</string>
+    <string name="menu_logout">Log out</string>
+    <string name="menu_version">Version %1$s</string>
+    <string name="menu_share_text">Check out Mafi Mushkil — the on-demand services app! Download it now: https://play.google.com/store/apps/details?id=com.vardash.mafimushkil</string>
+    <string name="menu_logout_title">See you soon!</string>
+    <string name="menu_logout_confirm">Are you sure you want to log out?</string>
+    <string name="menu_logout_yes">Yes, Log me out</string>
+    <string name="menu_cancel">Cancel</string>
+    <string name="menu_my_orders">My Orders</string>
+    <string name="menu_notifications">Notifications</string>
+    <string name="menu_help">Help</string>
+    <string name="menu_rate_app">Rate App</string>
+
+    <!-- Orders Screen -->
+    <string name="orders_title">My Orders</string>
+    <string name="orders_pending">Pending</string>
+    <string name="orders_history">History</string>
+    <string name="orders_empty_active_title">No orders yet</string>
+    <string name="orders_empty_active_desc">You don\'t have any active order right now.</string>
+    <string name="orders_empty_history_title">No history yet</string>
+    <string name="orders_empty_history_desc">You don\'t have any order history yet.</string>
+    <string name="orders_completed">Your order is completed</string>
+    <string name="orders_cancelled">Your order is cancelled</string>
+    <string name="orders_needed">%1$s needed...</string>
+    <string name="orders_time_just_now">Just now</string>
+    <string name="orders_time_mins_ago">%1$d mins ago</string>
+    <string name="orders_time_hrs_ago">%1$d hrs ago</string>
+    <string name="orders_time_days_ago">%1$d days ago</string>
+
+    <!-- Order Detail -->
+    <string name="order_detail_title">Order Details</string>
+    <string name="order_detail_status">Order status: %1$s</string>
+    <string name="order_detail_address">Address:</string>
+    <string name="order_detail_service_type">Service type</string>
+    <string name="order_detail_date">Order date</string>
+    <string name="order_detail_details">Details</string>
+    <string name="order_detail_attachments">Attachments</string>
+    <string name="order_detail_show_more">Show more</string>
+    <string name="order_detail_help_title">Do you need any help?</string>
+    <string name="order_detail_help_desc">After confirmation, we will assign workers for your order.</string>
+    <string name="order_detail_contact">Contact</string>
+    <string name="order_detail_booked_services">Booked Services</string>
+    <string name="order_detail_workers">Workers/Helpers</string>
+    <string name="order_detail_payments">Payments</string>
+    <string name="order_detail_confirm_warning">We have added items and prices in your order. Kindly confirm by tapping `Confirm Details` button.</string>
+    <string name="order_detail_confirm_button">Confirm Details</string>
+
+    <!-- Order Status Descriptions -->
+    <string name="desc_pending">We received your request and will get back to you as soon as we review the order.</string>
+    <string name="desc_accepted">We reviewed your request. Our team will contact you soon to provide a quote.</string>
+    <string name="desc_confirmed">You have confirmed your order. We are going to assign workers for your order.</string>
+    <string name="desc_assigned">Workers have been assigned to your order. They will soon start working on your order.</string>
+    <string name="desc_in_progress">Your order is in progress. Our workers will make sure to do quality work for you.</string>
+    <string name="desc_cancelled">We have cancelled this order because customer was not responding.</string>
+    <string name="desc_completed">Your order has successfully been completed. We hope that you have liked our services.</string>
+    <string name="desc_default">Your order is being processed.</string>
+
+    <!-- Order Status -->
+    <string name="status_pending">Pending</string>
+    <string name="status_confirmed">Confirmed</string>
+    <string name="status_assigned">Assigned</string>
+    <string name="status_accepted">Accepted</string>
+    <string name="status_in_progress">In Progress</string>
+    <string name="status_completed">Completed</string>
+    <string name="status_cancelled">Cancelled</string>
+
+    <!-- Promotions Screen -->
+    <string name="promotions_empty_title">No promos yet</string>
+    <string name="promotions_empty_desc">There are no promos available right now.\nCheck back later.</string>
+    <string name="promotions_status_active">Active</string>
+    <string name="promotions_status_expired">Expired</string>
+
+    <!-- Notifications Screen -->
+    <string name="notifications_empty_title">No notifications yet</string>
+    <string name="notifications_empty_desc">You don\'t have any notifications right now.\nCheck back later.</string>
+
+    <!-- Details Screen -->
+    <string name="details_title">Details</string>
+    <string name="save">Save</string>
+    <string name="add_details">Add details</string>
+    <string name="details_placeholder">Write details here...</string>
+
+    <!-- Place Order Screen -->
+    <string name="place_order_title">Place Order</string>
+    <string name="place_order_category">Category</string>
+    <string name="place_order_address">Address</string>
+    <string name="place_order_add_address">Add Address</string>
+    <string name="place_order_details">Details</string>
+    <string name="place_order_add_details">Add details</string>
+    <string name="place_order_photo">Photo</string>
+    <string name="place_order_confirm_button">Confirm Order</string>
+
+    <!-- Confirm Order Sheet -->
+    <string name="confirm_order_sheet_title">Confirm Order</string>
+    <string name="confirm_order_sheet_desc">We will process your order as soon as you press the Place Order button.</string>
+    <string name="confirm_order_sheet_button">Place Order</string>
+
+    <!-- Select Location -->
+    <string name="select_location_title">Select Location</string>
+    <string name="select_location_placeholder">Enter address</string>
+    <string name="select_location_choose_map">Choose on Map</string>
+    <string name="select_location_no_results">No results found</string>
+
+    <!-- Choose on Map -->
+    <string name="choose_map_search_placeholder">Search for location</string>
+    <string name="choose_map_done">Done</string>
+    <string name="choose_map_determining">Determining location...</string>
+    <string name="search_location">Search for location</string>
+    <string name="confirm_location">Confirm Location</string>
+
+    <!-- Location Permissions/Services -->
+    <string name="location_disabled_title">Location Services Disabled</string>
+    <string name="location_disabled_desc">To automatically find your current location, please enable your device\'s location services in Settings.</string>
+    <string name="location_enable_settings">Enable in Settings</string>
+    <string name="location_permission_denied">Location permission denied</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_title">My profile</string>
+    <string name="profile_photo">Profile photo</string>
+    <string name="profile_name">Name</string>
+    <string name="profile_email">Email</string>
+    <string name="profile_contact">Contact number</string>
+    <string name="profile_gender">Gender</string>
+    <string name="profile_not_set">Not set</string>
+    <string name="profile_email_verified">Your email is verified!</string>
+    <string name="profile_email_not_verified">Your email is not verified!</string>
+    <string name="profile_update_phone_title">Update phone number</string>
+    <string name="profile_update_phone_desc">If you would like to update your phone number, a verification code will be sent to you via SMS. Press the button below to continue.</string>
+    <string name="profile_update_button">Update</string>
+    <string name="profile_verified_desc">Verified</string>
+
+    <!-- Edit Profile Fields -->
+    <string name="edit_photo_title">Edit photo</string>
+    <string name="edit_photo_gallery">Choose from Gallery</string>
+    <string name="edit_photo_camera">Take Photo</string>
+    <string name="edit_photo_success">Image updated successfully</string>
+    <string name="edit_photo_guideline">You can adjust the size or placement of the photo</string>
+    <string name="camera_permission_denied">Camera permission denied</string>
+    <string name="edit_name_title">Edit Name</string>
+    <string name="edit_name_placeholder">Enter your name</string>
+    <string name="edit_name_success">Name updated successfully</string>
+    <string name="edit_email_title">Edit Email</string>
+    <string name="edit_email_placeholder">Enter your email</string>
+    <string name="edit_email_verify_title">Verify your email</string>
+    <string name="edit_email_verify_desc">We have sent you a verification email to verify the provided email. Please check your inbox.</string>
+    <string name="edit_email_resend_hint">If you haven\'t received verification email or the activation link is expired, click `Resend Verification Email` to receive a new verification link</string>
+    <string name="edit_email_resend_button">Resend Verification Email</string>
+    <string name="edit_gender_title">Edit Gender</string>
+    <string name="edit_gender_male">Male</string>
+    <string name="edit_gender_female">Female</string>
+    <string name="edit_gender_success">Gender updated successfully</string>
+
+    <!-- Contact Us Screen -->
+    <string name="contact_title">Contact Us</string>
+    <string name="contact_subtitle">If you have any question\nwe are happy to help</string>
+    <string name="contact_get_connected">Get Connected</string>
+    <string name="contact_copy_phone">Copy phone number</string>
+    <string name="contact_call_us">Call us</string>
+    <string name="contact_open_whatsapp">Open in WhatsApp</string>
+    <string name="contact_copy_email">Copy email</string>
+    <string name="contact_send_email">Send email</string>
+    <string name="contact_toast_phone_copied">Number copied</string>
+    <string name="contact_toast_email_copied">Email copied</string>
+
+    <!-- Rate Sheet -->
+    <string name="rate_title">Rate Mafi Mushkil</string>
+    <string name="rate_subtitle">How would you rate your experience with our app?</string>
+    <string name="rate_placeholder">Tell us more (optional)</string>
+    <string name="rate_submit">Submit</string>
+    <string name="rate_thanks">Thank you for your feedback!</string>
+    <string name="rate_success_desc">Your rating helps us improve the app for everyone.</string>
+
+    <!-- Become Worker -->
+    <string name="become_worker_title">BECOME A WORKER WITH US?</string>
+    <string name="become_worker_subtitle">Join Our Workforce Today</string>
+    <string name="worker_feature1_title">Increased Job Opportunities</string>
+    <string name="worker_feature1_desc">Expand your client base and enjoy flexible working hours.</string>
+    <string name="worker_feature2_title">Enhanced Professional Reputation</string>
+    <string name="worker_feature2_desc">Build credibility through user reviews and showcase your work.</string>
+    <string name="worker_feature3_title">Convenient Business Management</string>
+    <string name="worker_feature3_desc">Enjoy a hassle-free payment process, with secure and direct earnings deposited into your account.</string>
+    <string name="register_now">Register Now</string>
+    <string name="need_help">Need Help?</string>
+    <string name="registration_submitted">Registration Submitted</string>
+    <string name="worker_registration_success_desc">Thank you for registering as a skilled worker with us. We will get back to you soon.</string>
+
+    <!-- Register Company -->
+    <string name="register_company_title">REGISTER A COMPANY WITH US?</string>
+    <string name="register_company_subtitle">Register and Grow Your Business!</string>
+    <string name="company_feature1_title">Quality Client Acquisition</string>
+    <string name="company_feature1_desc">Receive job requests from customers who value professionalism and are willing to pay fair rates.</string>
+    <string name="company_feature2_title">Enhanced Earning Potential</string>
+    <string name="company_feature2_desc">Access higher-paying projects and long-term contracts for increased income potential.</string>
+    <string name="company_feature3_title">Building Trust and Reputation</string>
+    <string name="company_feature3_desc">Enhance your professional reputation by consistently delivering high-quality services, earning trust and repeat business.</string>
+    <string name="company_registration_success_desc">Thank you for registering your company with us. We will get back to you soon.</string>
+
+    <!-- Forms -->
+    <string name="full_name">Full Name</string>
+    <string name="phone_number_hint">Enter phone number</string>
+    <string name="email_hint">Enter email address</string>
+    <string name="work_type">Work type</string>
+    <string name="work_type_placeholder">e.g. Plumber, Electrician etc</string>
+    <string name="years_of_experience">Years of experience</string>
+    <string name="years_of_experience_hint">Enter years of experience</string>
+    <string name="submit">Submit</string>
+    <string name="select_work_type">Select work type</string>
+    <string name="company_name">Company Name</string>
+    <string name="company_name_hint">Enter company name</string>
+    <string name="supervisor_name">Supervisor Name</string>
+    <string name="supervisor_name_hint">Enter supervisor name</string>
+    <string name="worker_type">Type of workers</string>
+    <string name="select_worker_type">Select workers type</string>
+    <string name="address">Address</string>
+    <string name="address_hint">Select your address</string>
+</resources>

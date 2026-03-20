@@ -1,0 +1,278 @@
+<resources>
+    <string name="app_name">مافي مشكل</string>
+    <string name="mafi_mushkil">مافي\nمشكل</string>
+    <string name="app_logo_desc">شعار التطبيق</string>
+    <string name="pixel_io">بكسل آي أو</string>
+    <string name="technologies">للتقنية</string>
+    <string name="pixel_io_desc">بكسل آي أو للتقنية</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_title">أفضل الأيادي العاملة\nمن أجل المساعدة</string>
+    <string name="welcome_subtitle">مع تطبيق الخدمات عند الطلب الخاص بنا،\nنقدم لك خدمات أفضل.</string>
+    <string name="get_started">ابدأ الآن</string>
+    <string name="worker_image_desc">عامل</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title1">اختر خدمة</string>
+    <string name="onboarding_desc1">اعثر على الخدمة المناسبة لاحتياجاتك بسهولة، مع مجموعة متنوعة من الخيارات المتاحة في متناول يدك.</string>
+    <string name="onboarding_title2">احصل على عرض سعر</string>
+    <string name="onboarding_desc2">اطلب تقديرات الأسعار من المحترفين لمساعدتك في اتخاذ قرارات مدروسة بكل سهولة.</string>
+    <string name="onboarding_title3">إنجاز العمل</string>
+    <string name="onboarding_desc3">استرخِ بينما يتولى الخبراء المهرة مهامك بكفاءة، مما يضمن إنجاز العمل على أكمل وجه.</string>
+    <string name="skip">تخطي</string>
+    <string name="next">التالي</string>
+    <string name="finish">إنهاء</string>
+
+    <!-- Security Verification -->
+    <string name="security_verification_title">التحقق الأمني</string>
+    <string name="security_verification_subtitle">هذا هو أول تسجيل دخول لك من هذا الجهاز. لضمان أمن حسابك، يرجى التحقق من هويتك.</string>
+    <string name="start_to_verify">ابدأ التحقق</string>
+
+    <!-- Phone Verification -->
+    <string name="phone_verification_title">أدخل رقم هاتفك\nللتحقق</string>
+    <string name="phone_verification_update_title">أدخل رقم الهاتف الجديد\nللتحقق</string>
+    <string name="phone_number_label">رقم الهاتف</string>
+    <string name="verify">تحقق</string>
+    <string name="send_code">إرسال الرمز</string>
+    <string name="close">إغلاق</string>
+
+    <!-- OTP Verification -->
+    <string name="otp_title">أدخل الرمز للمتابعة</string>
+    <string name="otp_subtitle">تم إرسال رمز التحقق إلى %1$s عبر رسالة نصية.</string>
+    <string name="otp_placeholder">أدخل الرمز هنا</string>
+    <string name="resend_code">إعادة إرسال الرمز</string>
+    <string name="resend_timer">إعادة إرسال الرمز خلال %1$d ثانية</string>
+    <string name="phone_updated">تم تحديث رقم الهاتف!</string>
+    <string name="verification_successful">تم التحقق بنجاح</string>
+    <string name="ok">موافق</string>
+    <string name="back">رجوع</string>
+
+    <!-- Home Screen -->
+    <string name="home_search_placeholder">أريد استئجار...</string>
+    <string name="home_services_title">الخدمات</string>
+    <string name="home_more">المزيد</string>
+    <string name="menu_desc">القائمة</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_orders">طلباتي</string>
+    <string name="nav_promotions">العروض</string>
+    <string name="nav_notifications">التنبيهات</string>
+
+    <!-- Categories -->
+    <string name="categories_title">الفئات</string>
+    <string name="cat_cleaning">تنظيف</string>
+    <string name="cat_electrician">كهربائي</string>
+    <string name="cat_plumber">سباك</string>
+    <string name="cat_carpenter">نجار</string>
+
+    <!-- Menu Drawer -->
+    <string name="menu_profile">حسابي الشخصي</string>
+    <string name="menu_contact">اتصل بنا</string>
+    <string name="menu_become_worker">كن عاملاً</string>
+    <string name="menu_register_company">سجل شركة</string>
+    <string name="menu_share">مشاركة</string>
+    <string name="menu_rate">تقييم</string>
+    <string name="menu_logout">تسجيل الخروج</string>
+    <string name="menu_version">الإصدار %1$s</string>
+    <string name="menu_share_text">تحقق من مافي مشكل — تطبيق الخدمات عند الطلب! حمله الآن: https://play.google.com/store/apps/details?id=com.vardash.mafimushkil</string>
+    <string name="menu_logout_title">عد قريباً!</string>
+    <string name="menu_logout_confirm">هل أنت متأكد أنك تريد تسجيل الخروج؟</string>
+    <string name="menu_logout_yes">نعم، سجل خروجي</string>
+    <string name="menu_cancel">إلغاء</string>
+
+    <!-- Orders Screen -->
+    <string name="orders_title">طلباتي</string>
+    <string name="orders_pending">قيد التنفيذ</string>
+    <string name="orders_history">السجل</string>
+    <string name="orders_empty_active_title">لا توجد طلبات بعد</string>
+    <string name="orders_empty_active_desc">ليس لديك أي طلب نشط حالياً.</string>
+    <string name="orders_empty_history_title">لا يوجد سجل بعد</string>
+    <string name="orders_empty_history_desc">ليس لديك أي سجل طلبات بعد.</string>
+    <string name="orders_completed">اكتمل طلبك</string>
+    <string name="orders_cancelled">تم إلغاء طلبك</string>
+    <string name="orders_needed">مطلوب %1$s...</string>
+    <string name="orders_time_just_now">الآن</string>
+    <string name="orders_time_mins_ago">منذ %1$d دقيقة</string>
+    <string name="orders_time_hrs_ago">منذ %1$d ساعة</string>
+    <string name="orders_time_days_ago">منذ %1$d يوم</string>
+
+    <!-- Order Detail -->
+    <string name="order_detail_title">تفاصيل الطلب</string>
+    <string name="order_detail_status">حالة الطلب: %1$s</string>
+    <string name="order_detail_address">العنوان:</string>
+    <string name="order_detail_service_type">نوع الخدمة</string>
+    <string name="order_detail_date">تاريخ الطلب</string>
+    <string name="order_detail_details">التفاصيل</string>
+    <string name="order_detail_attachments">المرفقات</string>
+    <string name="order_detail_show_more">عرض المزيد</string>
+    <string name="order_detail_help_title">هل تحتاج إلى أي مساعدة؟</string>
+    <string name="order_detail_help_desc">بعد التأكيد، سنقوم بتعيين عمال لطلبك.</string>
+    <string name="order_detail_contact">اتصال</string>
+
+    <!-- Order Status Descriptions -->
+    <string name="desc_pending">لقد تلقينا طلبك وسنعاود الاتصال بك بمجرد مراجعة الطلب.</string>
+    <string name="desc_accepted">لقد راجعنا طلبك. سيتصل بك فريقنا قريباً لتقديم عرض سعر.</string>
+    <string name="desc_cancelled">لقد ألغينا هذا الطلب لأن العميل لم يستجب.</string>
+    <string name="desc_completed">تم إكمال الطلب بنجاح. شكراً لاستخدامك مافي مشكل.</string>
+    <string name="desc_default">طلبك قيد المعالجة.</string>
+
+    <!-- Order Status -->
+    <string name="status_pending">قيد الانتظار</string>
+    <string name="status_confirmed">مؤكد</string>
+    <string name="status_assigned">تم التعيين</string>
+    <string name="status_accepted">مقبول</string>
+    <string name="status_in_progress">قيد العمل</string>
+    <string name="status_completed">مكتمل</string>
+    <string name="status_cancelled">ملغي</string>
+
+    <!-- Promotions Screen -->
+    <string name="promotions_empty_title">لا توجد عروض بعد</string>
+    <string name="promotions_empty_desc">لا توجد عروض متاحة حالياً.\nعد لاحقاً.</string>
+    <string name="promotions_status_active">نشط</string>
+    <string name="promotions_status_expired">منتهي</string>
+
+    <!-- Notifications Screen -->
+    <string name="notifications_empty_title">لا توجد تنبيهات بعد</string>
+    <string name="notifications_empty_desc">ليس لديك أي تنبيهات حالياً.\nعد لاحقاً.</string>
+
+    <!-- Details Screen -->
+    <string name="details_title">التفاصيل</string>
+    <string name="save">حفظ</string>
+    <string name="add_details">إضافة تفاصيل</string>
+    <string name="details_placeholder">اكتب التفاصيل هنا...</string>
+
+    <!-- Place Order Screen -->
+    <string name="place_order_title">تقديم الطلب</string>
+    <string name="place_order_category">الفئة</string>
+    <string name="place_order_address">العنوان</string>
+    <string name="place_order_add_address">إضافة عنوان</string>
+    <string name="place_order_details">التفاصيل</string>
+    <string name="place_order_add_details">إضافة تفاصيل</string>
+    <string name="place_order_photo">صورة</string>
+    <string name="place_order_confirm_button">تأكيد الطلب</string>
+
+    <!-- Confirm Order Sheet -->
+    <string name="confirm_order_sheet_title">تأكيد الطلب</string>
+    <string name="confirm_order_sheet_desc">سنقوم بمعالجة طلبك بمجرد الضغط على زر تقديم الطلب.</string>
+    <string name="confirm_order_sheet_button">تقديم الطلب</string>
+
+    <!-- Select Location -->
+    <string name="select_location_title">تحديد الموقع</string>
+    <string name="select_location_placeholder">أدخل العنوان</string>
+    <string name="select_location_choose_map">تحديد على الخريطة</string>
+    <string name="select_location_no_results">لم يتم العثور على نتائج</string>
+
+    <!-- Choose on Map -->
+    <string name="choose_map_search_placeholder">البحث عن موقع</string>
+    <string name="choose_map_done">تم</string>
+    <string name="choose_map_determining">تحديد الموقع...</string>
+    <string name="search_location">البحث عن موقع</string>
+    <string name="confirm_location">تأكيد الموقع</string>
+
+    <!-- Location Permissions/Services -->
+    <string name="location_disabled_title">خدمات الموقع معطلة</string>
+    <string name="location_disabled_desc">للعثور على موقعك الحالي تلقائيًا، يرجى تمكين خدمات الموقع بجهازك في الإعدادات.</string>
+    <string name="location_enable_settings">تمكين في الإعدادات</string>
+    <string name="location_permission_denied">تم رفض إذن الموقع</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_title">ملفي الشخصي</string>
+    <string name="profile_photo">الصورة الشخصية</string>
+    <string name="profile_name">الاسم</string>
+    <string name="profile_email">البريد الإلكتروني</string>
+    <string name="profile_contact">رقم التواصل</string>
+    <string name="profile_gender">الجنس</string>
+    <string name="profile_not_set">لم يتم التعيين</string>
+    <string name="profile_email_verified">تم التحقق من بريدك الإلكتروني!</string>
+    <string name="profile_email_not_verified">بريدك الإلكتروني غير موثق!</string>
+    <string name="profile_update_phone_title">تحديث رقم الهاتف</string>
+    <string name="profile_update_phone_desc">إذا كنت ترغب في تحديث رقم هاتفك، فسيتم إرسال رمز تحقق إليك عبر رسالة نصية. اضغط على الزر أدناه للمتابعة.</string>
+    <string name="profile_update_button">تحديث</string>
+    <string name="profile_verified_desc">موثق</string>
+
+    <!-- Edit Profile Fields -->
+    <string name="edit_photo_title">تعديل الصورة</string>
+    <string name="edit_photo_gallery">اختر من المعرض</string>
+    <string name="edit_photo_camera">التقاط صورة</string>
+    <string name="edit_photo_success">تم تحديث الصورة بنجاح</string>
+    <string name="edit_photo_guideline">يمكنك تعديل حجم الصورة أو تحريكها</string>
+    <string name="camera_permission_denied">تم رفض إذن الكاميرا</string>
+    <string name="edit_name_title">تعديل الاسم</string>
+    <string name="edit_name_placeholder">أدخل اسمك</string>
+    <string name="edit_name_success">تم تحديث الاسم بنجاح</string>
+    <string name="edit_email_title">تعديل البريد الإلكتروني</string>
+    <string name="edit_email_placeholder">أدخل بريدك الإلكتروني</string>
+    <string name="edit_email_verify_title">تحقق من بريدك الإلكتروني</string>
+    <string name="edit_email_verify_desc">لقد أرسلنا لك بريدًا إلكترونيًا للتحقق إلى العنوان المقدم. يرجى التحقق من صندوق الوارد الخاص بك.</string>
+    <string name="edit_email_resend_hint">إذا لم تستلم بريد التحقق أو انتهت صلاحية رابط التفعيل، اضغط على `إعادة إرسال بريد التحقق` لتلقي رابط جديد</string>
+    <string name="edit_email_resend_button">إعادة إرسال بريد التحقق</string>
+    <string name="edit_gender_title">تعديل الجنس</string>
+    <string name="edit_gender_male">ذكر</string>
+    <string name="edit_gender_female">أنثى</string>
+    <string name="edit_gender_success">تم تحديث الجنس بنجاح</string>
+
+    <!-- Contact Us Screen -->
+    <string name="contact_title">اتصل بنا</string>
+    <string name="contact_subtitle">إذا كان لديك أي سؤال\nيسعدنا مساعدتك</string>
+    <string name="contact_get_connected">تواصل معنا</string>
+    <string name="contact_copy_phone">نسخ رقم الهاتف</string>
+    <string name="contact_call_us">اتصل بنا</string>
+    <string name="contact_open_whatsapp">فتح في واتساب</string>
+    <string name="contact_copy_email">نسخ البريد الإلكتروني</string>
+    <string name="contact_send_email">إرسال بريد إلكتروني</string>
+    <string name="contact_toast_phone_copied">تم نسخ الرقم</string>
+    <string name="contact_toast_email_copied">تم نسخ البريد الإلكتروني</string>
+
+    <!-- Rate Sheet -->
+    <string name="rate_title">تقييم مافي مشكل</string>
+    <string name="rate_subtitle">كيف تقيم تجربتك مع تطبيقنا؟</string>
+    <string name="rate_placeholder">أخبرنا بالمزيد (اختياري)</string>
+    <string name="rate_submit">إرسال</string>
+    <string name="rate_thanks">شكراً لك على ملاحظاتك!</string>
+    <string name="rate_success_desc">تقييمك يساعدنا في تحسين التطبيق للجميع.</string>
+
+    <!-- Become Worker -->
+    <string name="become_worker_title">هل تود أن تصبح عاملاً معنا؟</string>
+    <string name="become_worker_subtitle">انضم إلى القوى العاملة لدينا اليوم</string>
+    <string name="worker_feature1_title">زيادة فرص العمل</string>
+    <string name="worker_feature1_desc">قم بتوسيع قاعدة عملائك واستمتع بساعات عمل مرنة.</string>
+    <string name="worker_feature2_title">تحسين السمعة المهنية</string>
+    <string name="worker_feature2_desc">ابنِ مصداقيتك من خلال تقييمات المستخدمين واعرض أعمالك.</string>
+    <string name="worker_feature3_title">إدارة أعمال مريحة</string>
+    <string name="worker_feature3_desc">استمتع بعملية دفع خالية من المتاعب، مع إيداع أرباح آمنة ومباشرة في حسابك.</string>
+    <string name="register_now">سجل الآن</string>
+    <string name="need_help">هل تحتاج إلى مساعدة؟</string>
+    <string name="registration_submitted">تم تقديم الطلب</string>
+    <string name="worker_registration_success_desc">شكراً لتسجيلك كعامل ماهر معنا. سنتواصل معك قريباً.</string>
+
+    <!-- Register Company -->
+    <string name="register_company_title">هل تود تسجيل شركة معنا؟</string>
+    <string name="register_company_subtitle">سجل وقم بتنمية عملك!</string>
+    <string name="company_feature1_title">استقطاب عملاء ذوي جودة</string>
+    <string name="company_feature1_desc">تلقَ طلبات عمل من عملاء يقدرون الاحترافية ومستعدون لدفع أسعار عادلة.</string>
+    <string name="company_feature2_title">تعزيز إمكانات الكسب</string>
+    <string name="company_feature2_desc">احصل على مشاريع ذات دخل أعلى وعقود طويلة الأجل لزيادة إمكانات الدخل.</string>
+    <string name="company_feature3_title">بناء الثقة والسمعة</string>
+    <string name="company_feature3_desc">عزز سمعتك المهنية من خلال تقديم خدمات عالية الجودة باستمرار، وكسب الثقة وتكرار الأعمال.</string>
+    <string name="company_registration_success_desc">شكراً لتسجيل شركتك معنا. سنتواصل معك قريباً.</string>
+
+    <!-- Forms -->
+    <string name="full_name">الاسم الكامل</string>
+    <string name="phone_number_hint">أدخل رقم الهاتف</string>
+    <string name="email_hint">أدخل البريد الإلكتروني</string>
+    <string name="work_type">نوع العمل</string>
+    <string name="work_type_placeholder">مثلاً: سباك، كهربائي، إلخ</string>
+    <string name="years_of_experience">سنوات الخبرة</string>
+    <string name="years_of_experience_hint">أدخل عدد سنوات الخبرة</string>
+    <string name="submit">إرسال</string>
+    <string name="select_work_type">اختر نوع العمل</string>
+    <string name="company_name">اسم الشركة</string>
+    <string name="company_name_hint">أدخل اسم الشركة</string>
+    <string name="supervisor_name">اسم المشرف</string>
+    <string name="supervisor_name_hint">أدخل اسم المشرف</string>
+    <string name="worker_type">نوع العمال</string>
+    <string name="select_worker_type">اختر نوع العمال</string>
+    <string name="address">العنوان</string>
+    <string name="address_hint">اختر عنوانك</string>
+</resources>

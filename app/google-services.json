@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1063428181700",
+    "project_id": "mafimushkil-1b481",
+    "storage_bucket": "mafimushkil-1b481.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1063428181700:android:ef77c4a35ddcfbae738391",
+        "android_client_info": {
+          "package_name": "com.vardash.mafimushkil"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0NtOxd4vl5QelTpN2o9OdNWuCMsZNLBE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
