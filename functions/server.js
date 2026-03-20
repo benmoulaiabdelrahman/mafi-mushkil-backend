@@ -5,7 +5,15 @@ const app = express();
 const port = process.env.PORT || 8080;
 
 if (!admin.apps.length) {
-  admin.initializeApp();
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!serviceAccountJson) {
+    throw new Error("Missing FIREBASE_SERVICE_ACCOUNT environment variable");
+  }
+
+  const serviceAccount = JSON.parse(serviceAccountJson);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
 }
 
 const db = admin.firestore();
