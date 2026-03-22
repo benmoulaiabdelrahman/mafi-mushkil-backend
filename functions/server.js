@@ -33,6 +33,18 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.get("/payment/success", (req, res) => {
+  const orderId = String(req.query.orderId || "");
+  const deepLink = `mafimushkil://payment/success?orderId=${encodeURIComponent(orderId)}`;
+  res.redirect(deepLink);
+});
+
+app.get("/payment/failure", (req, res) => {
+  const orderId = String(req.query.orderId || "");
+  const deepLink = `mafimushkil://payment/failure?orderId=${encodeURIComponent(orderId)}`;
+  res.redirect(deepLink);
+});
+
 app.post("/webhooks/chargily", async (req, res) => {
   try {
     const payload = req.body || {};
@@ -61,6 +73,7 @@ app.post("/webhooks/chargily", async (req, res) => {
 
     const orderData = snapshot.data() || {};
     const payments = Array.isArray(orderData.payments) ? orderData.payments : [];
+    const nowTimestamp = admin.firestore.Timestamp.now();
 
     const updatedPayments = payments.map((payment) => {
       if (paymentId && payment.id !== paymentId) {
@@ -69,7 +82,7 @@ app.post("/webhooks/chargily", async (req, res) => {
       return {
         ...payment,
         status: "paid",
-        paidDate: Date.now(),
+        paidDate: nowTimestamp,
         reference: checkoutId || payment.reference || "",
       };
     });
@@ -78,7 +91,7 @@ app.post("/webhooks/chargily", async (req, res) => {
       {
         payments: updatedPayments,
         status: "completed",
-        updatedAt: Date.now(),
+        updatedAt: nowTimestamp,
       },
       { merge: true }
     );
