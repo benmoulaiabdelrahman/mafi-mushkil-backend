@@ -170,7 +170,7 @@ fun OrdersScreen(
     focusOrderId: String = ""
 ) {
     var selectedTab by remember { mutableIntStateOf(initialTab) }
-    var openedFocusedOrderId by remember(focusOrderId) { mutableStateOf("") }
+    var openedFocusedOrderId by remember { mutableStateOf("") }
     val tabs = listOf(
         stringResource(R.string.orders_pending),
         stringResource(R.string.orders_history)
@@ -196,6 +196,9 @@ fun OrdersScreen(
             openedFocusedOrderId = focusOrderId
             navController.navigate(Routes.orderDetail(focusOrderId)) {
                 launchSingleTop = true
+                popUpTo(Routes.Orders) {
+                    inclusive = false
+                }
             }
         }
     }

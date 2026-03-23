@@ -1,5 +1,6 @@
 package com.vardash.mafimushkil
 
+import android.app.ActivityManager
 import android.Manifest
 import android.app.PendingIntent
 import android.content.Intent
@@ -33,6 +34,12 @@ class MafiMushkilMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
         NotificationChannelHelper.ensureOrderUpdatesChannel(this)
+
+        val appInForeground = isAppInForeground()
+        val hasSystemNotification = remoteMessage.notification != null
+        if (hasSystemNotification && !appInForeground) {
+            return
+        }
 
         val title = remoteMessage.notification?.title
             ?: remoteMessage.data["title"]
@@ -82,6 +89,16 @@ class MafiMushkilMessagingService : FirebaseMessagingService() {
             this,
             Manifest.permission.POST_NOTIFICATIONS
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun isAppInForeground(): Boolean {
+        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        val processes = activityManager.runningAppProcesses ?: return false
+        val processName = packageName
+        return processes.any { process ->
+            process.processName == processName &&
+                process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+        }
     }
 
     private fun buildOrdersDeepLink(orderId: String, status: String): String {
