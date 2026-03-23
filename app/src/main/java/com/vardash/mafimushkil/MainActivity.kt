@@ -104,10 +104,11 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (navController?.handleDeepLink(intent) == true) {
+        handleIncomingIntent(intent)
+        if (paymentReturnRequest != null || notificationOpenRequest != null) {
             return
         }
-        handleIncomingIntent(intent)
+        navController?.handleDeepLink(intent)
     }
 
     private fun handleIncomingIntent(intent: Intent?) {

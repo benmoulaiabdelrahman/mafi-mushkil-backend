@@ -43,6 +43,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.core.view.WindowCompat
+import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.Routes
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -92,6 +93,7 @@ fun OrderDetailScreen(
     val order = selectedOrder ?: (pendingOrders + completedOrders).find { it.orderId == orderId }
 
     OrderDetailContent(
+        navController = navController,
         order = order,
         orderState = orderState,
         userProfile = userProfile,
@@ -105,6 +107,7 @@ fun OrderDetailScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OrderDetailContent(
+    navController: NavController,
     order: Order?,
     orderState: OrderState,
     userProfile: UserProfile,
@@ -151,62 +154,72 @@ private fun OrderDetailContent(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.White,
         bottomBar = {
-            if (status == "accepted") {
-                Surface(
-                    color = Color(0xFFF7F8FA),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .navigationBarsPadding(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (status == "accepted") {
+                    Surface(
+                        color = Color(0xFFF7F8FA),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .navigationBarsPadding(),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFFFB74D).copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 16.dp)
                             ) {
-                                Icon(
-                                    Icons.Outlined.ErrorOutline,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFFB74D),
-                                    modifier = Modifier.size(24.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFFFB74D).copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.ErrorOutline,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFB74D),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = "لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى مراجعتها ثم تأكيد التفاصيل.",
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF1A1A1A),
+                                    lineHeight = 18.sp,
+                                    modifier = Modifier.weight(1f),
+                                    fontFamily = Questv1FontFamily
                                 )
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = "لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى مراجعتها ثم تأكيد التفاصيل.",
-                                fontSize = 13.sp,
-                                color = Color(0xFF1A1A1A),
-                                lineHeight = 18.sp,
-                                modifier = Modifier.weight(1f),
-                                fontFamily = Questv1FontFamily
-                            )
-                        }
-                        Button(
-                            onClick = { showConfirmSheet = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828))
-                        ) {
-                            Text(
-                                text = "تأكيد التفاصيل",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                fontFamily = Questv1FontFamily
-                            )
+                            Button(
+                                onClick = { showConfirmSheet = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828))
+                            ) {
+                                Text(
+                                    text = "تأكيد التفاصيل",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    fontFamily = Questv1FontFamily
+                                )
+                            }
                         }
                     }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                ) {
+                    AppBottomBar(navController = navController, selectedIndex = 1)
                 }
             }
         }
@@ -1205,6 +1218,7 @@ private fun formatDisplayDate(date: Date): String {
 fun OrderDetailScreenPreview() {
     MafiMushkilTheme {
         OrderDetailContent(
+            navController = rememberNavController(),
             order = Order(
                 orderId = "preview_id",
                 categories = listOf(

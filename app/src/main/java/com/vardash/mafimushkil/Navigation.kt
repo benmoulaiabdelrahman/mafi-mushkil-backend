@@ -11,18 +11,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.*
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import android.net.Uri
 import android.util.Log
+import androidx.core.view.WindowCompat
 import com.vardash.mafimushkil.auth.ApplicationViewModel
 import com.vardash.mafimushkil.auth.AuthViewModel
 import com.vardash.mafimushkil.auth.OrderViewModel
@@ -40,6 +45,12 @@ fun AppNavigation(
     onNavControllerReady: (NavController) -> Unit = {}
 ) {
     val navController = rememberNavController()
+    val view = LocalView.current
+    val currentRoute = navController.currentBackStackEntryAsState().value
+        ?.destination
+        ?.route
+        ?.substringBefore("?")
+    val activeRoute = currentRoute ?: startDestination
 
     // Shared ViewModels
     val authViewModel: AuthViewModel = viewModel()
@@ -51,6 +62,29 @@ fun AppNavigation(
 
     LaunchedEffect(navController) {
         onNavControllerReady(navController)
+    }
+
+    SideEffect {
+        if (!view.isInEditMode) {
+            (view.context as? android.app.Activity)?.window?.let { window ->
+                val statusBarColor = if (activeRoute == Routes.Home || activeRoute == Routes.Splash) {
+                    Color(0xFFCCFD04)
+                } else {
+                    Color.White
+                }
+                val navigationBarColor = if (activeRoute == Routes.Home || activeRoute == Routes.Splash) {
+                    Color(0xFFCCFD04)
+                } else {
+                    Color.White
+                }
+                window.statusBarColor = statusBarColor.toArgb()
+                window.navigationBarColor = navigationBarColor.toArgb()
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = true
+                    isAppearanceLightNavigationBars = true
+                }
+            }
+        }
     }
 
     fun isBottomBarTransition(initial: NavBackStackEntry?, target: NavBackStackEntry?): Boolean {
@@ -71,11 +105,16 @@ fun AppNavigation(
 
     LaunchedEffect(notificationOpenRequest) {
         val request = notificationOpenRequest ?: return@LaunchedEffect
-        navController.navigate(Routes.orders(request.tab, request.focusOrderId)) {
+        navController.navigate(Routes.orders(request.tab)) {
             popUpTo(navController.graph.findStartDestination().id) {
                 inclusive = true
             }
             launchSingleTop = true
+        }
+        if (request.focusOrderId.isNotBlank()) {
+            navController.navigate(Routes.orderDetail(request.focusOrderId)) {
+                launchSingleTop = true
+            }
         }
         onNotificationOpenConsumed()
     }
@@ -198,15 +237,12 @@ fun AppNavigation(
             )
         ) { backStackEntry ->
             val tabStr = backStackEntry.arguments?.getString("tab") ?: "0"
-            val focusOrderId = backStackEntry.arguments?.getString("focusOrderId").orEmpty()
-            
             val initialTab = tabStr.toIntOrNull() ?: 0
             
             OrdersScreen(
                 navController = navController,
                 orderViewModel = orderViewModel,
-                initialTab = initialTab,
-                focusOrderId = focusOrderId
+                initialTab = initialTab
             )
         }
 

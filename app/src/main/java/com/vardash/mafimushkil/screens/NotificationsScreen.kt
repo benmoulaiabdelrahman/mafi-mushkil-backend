@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.Routes
@@ -333,12 +334,13 @@ fun NotificationsScreen(
                             onClick = {
                                 orderViewModel.markNotificationsSeen()
                                 hasMarkedSeen = true
-                                navController.navigate(
-                                    Routes.orders(
-                                        tab = notification.targetTab,
-                                        focusOrderId = notification.orderId
-                                    )
-                                ) {
+                                navController.navigate(Routes.orders(tab = notification.targetTab)) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
+                                }
+                                navController.navigate(Routes.orderDetail(notification.orderId)) {
                                     launchSingleTop = true
                                 }
                             }

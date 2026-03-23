@@ -29,7 +29,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
-import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.OrderViewModel
 import com.vardash.mafimushkil.models.Order
 import com.vardash.mafimushkil.models.toEpochMillis
@@ -166,11 +165,9 @@ private fun border(width: androidx.compose.ui.unit.Dp, color: Color) = androidx.
 fun OrdersScreen(
     navController: NavController,
     orderViewModel: OrderViewModel = viewModel(),
-    initialTab: Int = 0,
-    focusOrderId: String = ""
+    initialTab: Int = 0
 ) {
     var selectedTab by remember { mutableIntStateOf(initialTab) }
-    var openedFocusedOrderId by remember { mutableStateOf("") }
     val tabs = listOf(
         stringResource(R.string.orders_pending),
         stringResource(R.string.orders_history)
@@ -186,21 +183,6 @@ fun OrdersScreen(
     // If initialTab changes (e.g. from deep link), update selectedTab
     LaunchedEffect(initialTab) {
         selectedTab = initialTab
-    }
-
-    LaunchedEffect(focusOrderId, pendingOrders, completedOrders) {
-        if (focusOrderId.isBlank() || openedFocusedOrderId == focusOrderId) return@LaunchedEffect
-
-        val focusedOrder = (pendingOrders + completedOrders).firstOrNull { it.orderId == focusOrderId }
-        if (focusedOrder != null) {
-            openedFocusedOrderId = focusOrderId
-            navController.navigate(Routes.orderDetail(focusOrderId)) {
-                launchSingleTop = true
-                popUpTo(Routes.Orders) {
-                    inclusive = false
-                }
-            }
-        }
     }
 
     val currentList = if (selectedTab == 0) pendingOrders else completedOrders

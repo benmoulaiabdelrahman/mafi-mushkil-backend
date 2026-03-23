@@ -78,6 +78,8 @@ fun HomeScreen(
             }
     ) {
         Scaffold(
+            contentWindowInsets = WindowInsets(0.dp),
+            containerColor = Color(0xFFF8F9FD),
             bottomBar = {
                 AppBottomBar(navController = navController, selectedIndex = 0)
             }
