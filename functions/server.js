@@ -154,9 +154,10 @@ db.collection("orders").onSnapshot(
         token: fcmToken,
         android: {
           priority: "high",
-          notification: {
-            channelId: "mafi_mushkil_order_updates",
-          },
+        },
+        notification: {
+          title: "تحديث الطلب",
+          body,
         },
         data: {
           orderId,
