@@ -29,8 +29,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.OrderViewModel
 import com.vardash.mafimushkil.models.Order
+import com.vardash.mafimushkil.models.toEpochMillis
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 import java.util.*
@@ -48,9 +50,10 @@ fun statusColor(status: String): Color = when (status.lowercase()) {
 }
 
 @Composable
-fun formatTimeAgoLocalized(timestamp: Long): String {
+fun formatTimeAgoLocalized(timestamp: Any?): String {
+    val timestampMillis = timestamp.toEpochMillis()
     val now = System.currentTimeMillis()
-    val diff = now - timestamp
+    val diff = now - timestampMillis
     
     val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
     val hours = TimeUnit.MILLISECONDS.toHours(diff)
@@ -66,7 +69,7 @@ fun formatTimeAgoLocalized(timestamp: Long): String {
         days < 7 -> String.format(localeLatn, stringResource(R.string.orders_time_days_ago), days.toInt())
         else -> {
             val sdf = java.text.SimpleDateFormat("dd MMM yyyy", localeLatn)
-            sdf.format(Date(timestamp))
+            sdf.format(Date(timestampMillis))
         }
     }
 }
@@ -88,17 +91,13 @@ fun OrderCard(order: Order, onClick: () -> Unit) {
             // Left: title + description
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                 Text(
-                    text = when (order.status.lowercase()) {
-                        "completed" -> stringResource(R.string.orders_completed)
-                        "cancelled" -> stringResource(R.string.orders_cancelled)
-                        else -> {
-                            val maxVisible = 3
-                            val categoriesToDisplay = order.categories.take(maxVisible)
-                            val namesString = categoriesToDisplay.joinToString(", ") { it.name }
-                            val localizedNames = getLocalizedCategoryName(namesString)
-                            val finalNames = if (order.categories.size > maxVisible) "$localizedNames..." else localizedNames
-                            stringResource(R.string.orders_needed, finalNames)
-                        }
+                    text = run {
+                        val maxVisible = 3
+                        val categoriesToDisplay = order.categories.take(maxVisible)
+                        val namesString = categoriesToDisplay.joinToString(", ") { it.name }
+                        val localizedNames = getLocalizedCategoryName(namesString)
+                        val finalNames = if (order.categories.size > maxVisible) "$localizedNames..." else localizedNames
+                        stringResource(R.string.orders_needed, finalNames)
                     },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
@@ -166,9 +165,12 @@ private fun border(width: androidx.compose.ui.unit.Dp, color: Color) = androidx.
 @Composable
 fun OrdersScreen(
     navController: NavController,
-    orderViewModel: OrderViewModel = viewModel()
+    orderViewModel: OrderViewModel = viewModel(),
+    initialTab: Int = 0,
+    focusOrderId: String = ""
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(initialTab) }
+    var openedFocusedOrderId by remember(focusOrderId) { mutableStateOf("") }
     val tabs = listOf(
         stringResource(R.string.orders_pending),
         stringResource(R.string.orders_history)
@@ -179,6 +181,23 @@ fun OrdersScreen(
 
     LaunchedEffect(Unit) {
         orderViewModel.loadUserOrders()
+    }
+
+    // If initialTab changes (e.g. from deep link), update selectedTab
+    LaunchedEffect(initialTab) {
+        selectedTab = initialTab
+    }
+
+    LaunchedEffect(focusOrderId, pendingOrders, completedOrders) {
+        if (focusOrderId.isBlank() || openedFocusedOrderId == focusOrderId) return@LaunchedEffect
+
+        val focusedOrder = (pendingOrders + completedOrders).firstOrNull { it.orderId == focusOrderId }
+        if (focusedOrder != null) {
+            openedFocusedOrderId = focusOrderId
+            navController.navigate(Routes.orderDetail(focusOrderId)) {
+                launchSingleTop = true
+            }
+        }
     }
 
     val currentList = if (selectedTab == 0) pendingOrders else completedOrders

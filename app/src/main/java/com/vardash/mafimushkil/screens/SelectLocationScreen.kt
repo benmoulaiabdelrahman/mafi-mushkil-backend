@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -193,7 +194,7 @@ fun SelectLocationScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .clickable {
-                        navController.navigate("choose_on_map")
+                        navController.navigate(Routes.ChooseOnMap)
                     }
                     .padding(vertical = 12.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -230,21 +231,25 @@ fun SelectLocationScreen(
                 }
                 
                 itemsIndexed(searchResults) { index, result ->
-                    Column(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                navController.previousBackStackEntry?.savedStateHandle?.set("address", result)
-                                navController.popBackStack()
-                            }
-                            .padding(vertical = 12.dp, horizontal = 16.dp)
+                            .padding(vertical = 6.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp
                     ) {
-                        Text(text = result, fontSize = 14.sp, color = Color(0xFF1A1A1A))
-                        if (index < searchResults.size - 1) {
-                            HorizontalDivider(
-                                color = Color(0xFFEEEEEE), 
-                                modifier = Modifier.padding(top = 12.dp)
-                            )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    navController.previousBackStackEntry?.savedStateHandle?.set("address", result)
+                                    navController.popBackStack()
+                                }
+                                .padding(vertical = 14.dp, horizontal = 16.dp)
+                        ) {
+                            Text(text = result, fontSize = 14.sp, color = Color(0xFF1A1A1A))
                         }
                     }
                 }

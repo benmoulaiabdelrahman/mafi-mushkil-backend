@@ -82,6 +82,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("androidx.browser:browser:1.8.0")
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     
@@ -89,9 +90,11 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.10.0"))
 
     // Firebase libraries
+    implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-dynamic-links:22.1.0")
     implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-messaging-ktx:23.3.0")
     implementation("com.google.firebase:firebase-storage")
 
     // Coroutines support for Firebase

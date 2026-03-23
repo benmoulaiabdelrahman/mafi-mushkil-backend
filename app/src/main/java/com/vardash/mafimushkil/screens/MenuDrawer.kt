@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.vardash.mafimushkil.Routes
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.auth.AuthViewModel
@@ -146,13 +147,13 @@ fun MenuDrawer(
                             MenuListItem(
                                 icon = Icons.Outlined.Person,
                                 label = stringResource(R.string.menu_profile),
-                                onClick = { onClose(); navController.navigate("my_profile") }
+                                onClick = { onClose(); navController.navigate(Routes.MyProfile) }
                             )
                             HorizontalDivider(modifier = Modifier.padding(start = 60.dp), color = Color(0xFFF1F4F9))
                             MenuListItem(
                                 icon = Icons.Outlined.ContactSupport,
                                 label = stringResource(R.string.menu_contact),
-                                onClick = { onClose(); navController.navigate("contact_us") }
+                                onClick = { onClose(); navController.navigate(Routes.ContactUs) }
                             )
                         }
 
@@ -163,13 +164,13 @@ fun MenuDrawer(
                             MenuListItem(
                                 icon = Icons.Outlined.Engineering, 
                                 label = stringResource(R.string.menu_become_worker),
-                                onClick = { onClose(); navController.navigate("become_worker") }
+                                onClick = { onClose(); navController.navigate(Routes.BecomeWorker) }
                             )
                             HorizontalDivider(modifier = Modifier.padding(start = 60.dp), color = Color(0xFFF1F4F9))
                             MenuListItem(
                                 icon = Icons.Outlined.Domain, 
                                 label = stringResource(R.string.menu_register_company),
-                                onClick = { onClose(); navController.navigate("register_company") }
+                                onClick = { onClose(); navController.navigate(Routes.RegisterCompany) }
                             )
                         }
 
@@ -276,7 +277,7 @@ fun MenuDrawer(
                 onConfirm = {
                     showLogoutSheet = false
                     authViewModel.logout(context)
-                    navController.navigate("welcome") {
+                    navController.navigate(Routes.Welcome) {
                         popUpTo(0)
                     }
                 }

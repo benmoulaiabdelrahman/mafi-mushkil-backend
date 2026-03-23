@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.vardash.mafimushkil.Routes
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.vardash.mafimushkil.R
@@ -219,8 +220,8 @@ fun PlaceOrderScreen(
             showConfirmSheet = false
             orderViewModel.clearPendingOrder()
             orderViewModel.resetState()
-            navController.navigate("orders") {
-                popUpTo("home") { inclusive = false }
+            navController.navigate(Routes.Orders) {
+                popUpTo(Routes.Home) { inclusive = false }
             }
         }
     }
@@ -340,7 +341,7 @@ fun PlaceOrderScreen(
                             .background(Color.White)
                             .border(BorderStroke(1.dp, Color(0xFFEEEEEE)), RoundedCornerShape(12.dp))
                             .clickable {
-                                navController.navigate("categories?mode=add")
+                                navController.navigate(Routes.categories("add"))
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -413,7 +414,7 @@ fun PlaceOrderScreen(
             Spacer(Modifier.height(12.dp))
 
             Card(
-                onClick = { navController.navigate("select_location") },
+                onClick = { navController.navigate(Routes.SelectLocation) },
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 border = BorderStroke(1.dp, Color(0xFFEEEEEE)),

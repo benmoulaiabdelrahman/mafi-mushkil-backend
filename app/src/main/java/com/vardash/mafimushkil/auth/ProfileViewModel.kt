@@ -22,7 +22,10 @@ data class UserProfile(
     val isEmailVerified: Boolean = false,
     val photoScale: Float = 1f,
     val photoOffsetX: Float = 0f,
-    val photoOffsetY: Float = 0f
+    val photoOffsetY: Float = 0f,
+    val workerState: String = "not",
+    val workerExperience: String = "",
+    val workerServices: String = ""
 )
 
 sealed class ProfileState {
@@ -60,7 +63,10 @@ class ProfileViewModel : ViewModel() {
                         isEmailVerified = auth.currentUser?.isEmailVerified ?: false,
                         photoScale = snapshot.getDouble("photoScale")?.toFloat() ?: 1f,
                         photoOffsetX = snapshot.getDouble("photoOffsetX")?.toFloat() ?: 0f,
-                        photoOffsetY = snapshot.getDouble("photoOffsetY")?.toFloat() ?: 0f
+                        photoOffsetY = snapshot.getDouble("photoOffsetY")?.toFloat() ?: 0f,
+                        workerState = snapshot.getString("workerState") ?: "not",
+                        workerExperience = snapshot.getString("workerExperience") ?: "",
+                        workerServices = snapshot.getString("workerServices") ?: ""
                     )
                 }
                 _profileState.value = ProfileState.Idle

@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,33 +38,81 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.ApplicationState
 import com.vardash.mafimushkil.auth.ApplicationViewModel
+import com.vardash.mafimushkil.auth.ProfileViewModel
+import com.vardash.mafimushkil.auth.UserProfile
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
 // Data class and list moved here to be shared if needed, 
 // using names that won't conflict or cause unresolved references
 data class WorkerWorkType(
-    val name: String,
+    val labelRes: Int,
     val iconRes: Int
 )
 
 val workerWorkTypesList = listOf(
-    WorkerWorkType("Plumber",      R.drawable.repairing),
-    WorkerWorkType("Cleaning",     R.drawable.cleaning),
-    WorkerWorkType("Carpenter",    R.drawable.carpenter),
-    WorkerWorkType("Electrician",  R.drawable.electrician)
+    WorkerWorkType(R.string.cat_cleaning, R.drawable.cleaning),
+    WorkerWorkType(R.string.cat_electrician, R.drawable.electrician),
+    WorkerWorkType(R.string.cat_plumber, R.drawable.repairing),
+    WorkerWorkType(R.string.cat_carpenter, R.drawable.carpenter),
+    WorkerWorkType(R.string.cat_painter, R.drawable.painter),
+    WorkerWorkType(R.string.cat_mason, R.drawable.mason),
+    WorkerWorkType(R.string.cat_roofing, R.drawable.roofing),
+    WorkerWorkType(R.string.cat_ac_repair, R.drawable.ac_repair),
+    WorkerWorkType(R.string.cat_glazier, R.drawable.glazier),
+    WorkerWorkType(R.string.cat_cook, R.drawable.cook),
+    WorkerWorkType(R.string.cat_babysitter, R.drawable.babysitter),
+    WorkerWorkType(R.string.cat_nurse, R.drawable.nurse),
+    WorkerWorkType(R.string.cat_car_wash, R.drawable.car_wash),
+    WorkerWorkType(R.string.cat_moving, R.drawable.moving),
+    WorkerWorkType(R.string.cat_gardener, R.drawable.gardener),
+    WorkerWorkType(R.string.cat_car_repair, R.drawable.mechanic),
+    WorkerWorkType(R.string.cat_delivery, R.drawable.delivery),
+    WorkerWorkType(R.string.cat_errands, R.drawable.errands)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkerFormScreen(
     navController: NavController,
-    applicationViewModel: ApplicationViewModel = viewModel()
+    applicationViewModel: ApplicationViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     val applicationState by applicationViewModel.applicationState.collectAsState()
+    val userProfile by profileViewModel.userProfile.collectAsState()
 
+    WorkerFormContent(
+        navController = navController,
+        applicationState = applicationState,
+        userProfile = userProfile,
+        onLoadProfile = { profileViewModel.loadUserProfile() },
+        onSubmit = { fullName, phone, email, services, experience ->
+            applicationViewModel.submitWorkerApplication(
+                fullName = fullName,
+                phone = phone,
+                email = email,
+                services = services,
+                experience = experience,
+                bio = ""
+            )
+        },
+        onResetState = { applicationViewModel.resetState() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WorkerFormContent(
+    navController: NavController,
+    applicationState: ApplicationState,
+    userProfile: UserProfile,
+    onLoadProfile: () -> Unit,
+    onSubmit: (String, String, String, String, String) -> Unit,
+    onResetState: () -> Unit
+) {
     var fullName by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -71,16 +121,37 @@ fun WorkerFormScreen(
     var showWorkTypeSheet by remember { mutableStateOf(false) }
     var showSuccessSheet by remember { mutableStateOf(false) }
 
-    val isFormValid = fullName.isNotBlank() &&
-        phoneNumber.isNotBlank() &&
-        email.isNotBlank() &&
+    LaunchedEffect(Unit) {
+        onLoadProfile()
+    }
+
+    LaunchedEffect(userProfile.name, userProfile.phone, userProfile.email, userProfile.workerExperience, userProfile.workerServices) {
+        if (fullName.isBlank() && userProfile.name.isNotBlank()) fullName = userProfile.name
+        if (phoneNumber.isBlank() && userProfile.phone.isNotBlank()) phoneNumber = userProfile.phone
+        if (email.isBlank() && userProfile.email.isNotBlank()) email = userProfile.email
+        if (yearsExperience.isBlank() && userProfile.workerExperience.isNotBlank()) yearsExperience = userProfile.workerExperience
+        if (selectedWorkTypes.isEmpty() && userProfile.workerServices.isNotBlank()) {
+            selectedWorkTypes = userProfile.workerServices
+                .split(",")
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .toSet()
+        }
+    }
+
+    val resolvedFullName = fullName.ifBlank { userProfile.name }
+    val resolvedPhoneNumber = phoneNumber.ifBlank { userProfile.phone }
+    val resolvedEmail = email.ifBlank { userProfile.email }
+    val isFormValid = resolvedFullName.isNotBlank() &&
+        resolvedPhoneNumber.isNotBlank() &&
+        resolvedEmail.isNotBlank() &&
         yearsExperience.isNotBlank() &&
         selectedWorkTypes.isNotEmpty()
 
     LaunchedEffect(applicationState) {
         if (applicationState is ApplicationState.Success) {
             showSuccessSheet = true
-            applicationViewModel.resetState()
+            onResetState()
         }
     }
 
@@ -123,26 +194,33 @@ fun WorkerFormScreen(
                 .padding(16.dp)
                 .navigationBarsPadding()
         ) {
-            WorkerFormField(label = stringResource(R.string.full_name)) {
-                WorkerTextField(value = fullName, onValueChange = { fullName = it }, hint = stringResource(R.string.full_name))
+            if (userProfile.name.isBlank()) {
+                WorkerFormField(label = stringResource(R.string.full_name)) {
+                    WorkerTextField(value = fullName, onValueChange = { fullName = it }, hint = stringResource(R.string.full_name))
+                }
+                Spacer(Modifier.height(12.dp))
             }
-            Spacer(Modifier.height(12.dp))
-            WorkerFormField(label = stringResource(R.string.phone_number_label)) {
-                WorkerTextField(
-                    value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
-                    hint = stringResource(R.string.phone_number_hint),
-                    keyboardType = KeyboardType.Phone
-                )
+            if (userProfile.phone.isBlank()) {
+                WorkerFormField(label = stringResource(R.string.phone_number_label)) {
+                    WorkerTextField(
+                        value = phoneNumber,
+                        onValueChange = { phoneNumber = it },
+                        hint = stringResource(R.string.phone_number_hint),
+                        keyboardType = KeyboardType.Phone
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
             }
-            Spacer(Modifier.height(12.dp))
-            WorkerFormField(label = stringResource(R.string.profile_email)) {
-                WorkerTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    hint = stringResource(R.string.email_hint),
-                    keyboardType = KeyboardType.Email
-                )
+            if (userProfile.email.isBlank()) {
+                WorkerFormField(label = stringResource(R.string.profile_email)) {
+                    WorkerTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        hint = stringResource(R.string.email_hint),
+                        keyboardType = KeyboardType.Email
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
             }
             Spacer(Modifier.height(12.dp))
             WorkerFormField(label = stringResource(R.string.work_type)) {
@@ -193,13 +271,12 @@ fun WorkerFormScreen(
 
             Button(
                 onClick = {
-                    applicationViewModel.submitWorkerApplication(
-                        fullName = fullName,
-                        phone = phoneNumber,
-                        city = "",
-                        specialization = selectedWorkTypes.joinToString(", "),
-                        experience = yearsExperience,
-                        bio = ""
+                    onSubmit(
+                        resolvedFullName,
+                        resolvedPhoneNumber,
+                        resolvedEmail,
+                        selectedWorkTypes.joinToString(", "),
+                        yearsExperience
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -254,10 +331,11 @@ fun WorkerFormScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 560.dp)
                     .padding(horizontal = 24.dp)
                     .padding(top = 28.dp)
                     .navigationBarsPadding()
-                    .padding(bottom = 80.dp),
+                    .padding(bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -271,69 +349,66 @@ fun WorkerFormScreen(
                 )
                 Spacer(Modifier.height(16.dp))
 
-                workerWorkTypesList.forEach { workType ->
-                    val typeName = when(workType.iconRes) {
-                        R.drawable.repairing -> stringResource(R.string.cat_plumber)
-                        R.drawable.cleaning -> stringResource(R.string.cat_cleaning)
-                        R.drawable.carpenter -> stringResource(R.string.cat_carpenter)
-                        R.drawable.electrician -> stringResource(R.string.cat_electrician)
-                        else -> workType.name
-                    }
-                    val isSelected = selectedWorkTypes.contains(typeName)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selectedWorkTypes = if (isSelected)
-                                    selectedWorkTypes - typeName
-                                else
-                                    selectedWorkTypes + typeName
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(workType.iconRes),
-                                contentDescription = typeName,
-                                modifier = Modifier.size(36.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = typeName,
-                                fontSize = 15.sp,
-                                color = Color(0xFF282828),
-                                fontFamily = Questv1FontFamily
-                            )
-                        }
-                        // Checkmark
-                        Box(
+                LazyColumn(
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    items(workerWorkTypesList) { workType ->
+                        val typeName = stringResource(workType.labelRes)
+                        val isSelected = selectedWorkTypes.contains(typeName)
+                        Row(
                             modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) Color(0xFF282828) else Color.Transparent
-                                )
-                                .border(
-                                    1.5.dp,
-                                    if (isSelected) Color(0xFF282828) else Color(0xFFCCCCCC),
-                                    CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedWorkTypes = if (isSelected)
+                                        selectedWorkTypes - typeName
+                                    else
+                                        selectedWorkTypes + typeName
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            if (isSelected) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(workType.iconRes),
+                                    contentDescription = typeName,
+                                    modifier = Modifier.size(36.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = typeName,
+                                    fontSize = 15.sp,
+                                    color = Color(0xFF282828),
+                                    fontFamily = Questv1FontFamily
                                 )
                             }
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) Color(0xFF282828) else Color.Transparent
+                                    )
+                                    .border(
+                                        1.5.dp,
+                                        if (isSelected) Color(0xFF282828) else Color(0xFFCCCCCC),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
                         }
+                        HorizontalDivider(color = Color(0xFFF0F0F0))
                     }
-                    HorizontalDivider(color = Color(0xFFF0F0F0))
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -411,8 +486,8 @@ fun WorkerFormScreen(
                 Button(
                     onClick = {
                         showSuccessSheet = false
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = false }
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Home) { inclusive = false }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -485,7 +560,14 @@ fun WorkerTextField(
 fun WorkerFormScreenArabicPreview() {
     MafiMushkilTheme {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            WorkerFormScreen(navController = rememberNavController())
+            WorkerFormContent(
+                navController = rememberNavController(),
+                applicationState = ApplicationState.Idle,
+                userProfile = UserProfile(),
+                onLoadProfile = {},
+                onSubmit = { _, _, _, _, _ -> },
+                onResetState = {}
+            )
         }
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.auth.NotificationBadgeStore
 
 data class NavItem(
     val labelResId: Int,
@@ -45,6 +47,7 @@ val navItemsList = listOf(
 
 @Composable
 fun AppBottomBar(navController: NavController, selectedIndex: Int) {
+    val unreadNotificationCount = NotificationBadgeStore.unreadCount.collectAsState().value
     NavigationBar(
         containerColor = Color.White,
         tonalElevation = 0.dp
@@ -64,7 +67,7 @@ fun AppBottomBar(navController: NavController, selectedIndex: Int) {
                     }
                 },
                 icon = {
-                    if (item.hasBadge) {
+                    if (item.route == "notifications" && unreadNotificationCount > 0) {
                         Box {
                             Icon(
                                 if (selectedIndex == index) item.selectedIcon else item.unselectedIcon,

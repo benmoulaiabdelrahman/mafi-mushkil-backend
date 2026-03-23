@@ -32,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.AuthViewModel
 import com.vardash.mafimushkil.auth.OrderViewModel
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
@@ -53,10 +54,13 @@ fun HomeScreen(
     val error by orderViewModel.error.collectAsState()
 
     val filteredCategories = remember(searchQuery, categories) {
-        if (searchQuery.isEmpty()) {
+        val query = searchQuery.trim()
+        if (query.isEmpty()) {
             categories
         } else {
-            categories.filter { it.name.contains(searchQuery, ignoreCase = true) }
+            categories.filter {
+                categorySearchLabel(it.name).contains(query, ignoreCase = true)
+            }
         }
     }
 
@@ -237,7 +241,7 @@ fun HomeScreen(
                                     isMore = true,
                                     onClick = { 
                                         focusManager.clearFocus()
-                                        navController.navigate("categories?mode=fresh")
+                                    navController.navigate(Routes.categories())
                                     }
                                 )
                             }
@@ -253,6 +257,31 @@ fun HomeScreen(
             navController = navController,
             authViewModel = authViewModel
         )
+    }
+}
+
+private fun categorySearchLabel(name: String): String {
+    val key = name.trim().lowercase()
+    return when {
+        key == "cleaning" -> "تنظيف"
+        key == "electrician" -> "كهربائي"
+        key == "plumber" || key == "repairing" -> "سباك"
+        key == "carpenter" -> "نجار"
+        key == "painter" -> "دهان"
+        key == "mason" || key == "contractor" -> "بناء / مقاول"
+        key == "roofing" || key == "waterproofing" -> "سقف / عزل"
+        key.contains("ac") || key.contains("air condition") -> "تكييف وتبريد"
+        key.contains("glazier") || key.contains("glass") -> "زجاج"
+        key == "cook" || key == "chef" -> "طباخ"
+        key == "babysitter" || key == "nanny" -> "مربية"
+        key.contains("nurse") -> "ممرض منزلي"
+        key.contains("car wash") || key.contains("car_wash") -> "غسيل سيارات"
+        key.contains("moving") || key.contains("furniture") -> "نقل اثاث"
+        key == "gardener" -> "بستاني"
+        key.contains("mechanic") || (key.contains("car") && key.contains("repair")) -> "إصلاح سيارات"
+        key.contains("delivery") -> "توصيل"
+        key.contains("errand") -> "قضاء حوائج"
+        else -> name
     }
 }
 

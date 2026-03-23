@@ -38,8 +38,14 @@ object ChargilyManager {
             "Missing Chargily secret key in local.properties."
         }
 
+        val amount = payment.amount.roundToInt().coerceAtLeast(1)
+        require(amount <= 1_000_000) {
+            "Checkout amount $amount DA exceeds the safety cap of 1,000,000 DA."
+        }
+        Log.d(TAG, "Validated checkout amount for order $orderId: $amount DA")
+
         val request = CheckoutRequest(
-            amount = payment.amount.roundToInt().coerceAtLeast(1),
+            amount = amount,
             currency = "dzd",
             paymentMethod = payment.method.lowercase().ifBlank { "edahabia" },
             successUrl = "https://mafi-mushkil-backend.onrender.com/payment/success?orderId=$orderId",

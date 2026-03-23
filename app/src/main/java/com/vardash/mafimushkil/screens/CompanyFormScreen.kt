@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +40,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.ApplicationState
 import com.vardash.mafimushkil.auth.ApplicationViewModel
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
@@ -201,7 +204,7 @@ fun CompanyFormScreen(
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.White) // White card on gray background
                         .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
-                        .clickable { navController.navigate("select_location") }
+                        .clickable { navController.navigate(Routes.SelectLocation) }
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
@@ -235,6 +238,7 @@ fun CompanyFormScreen(
                         companyName = companyName,
                         ownerName = supervisorName,
                         phone = phoneNumber,
+                        email = email,
                         city = address,
                         serviceType = selectedWorkerTypes.joinToString(", "),
                         registrationNumber = "",
@@ -294,10 +298,11 @@ fun CompanyFormScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 560.dp)
                     .padding(horizontal = 24.dp)
                     .padding(top = 28.dp)
                     .navigationBarsPadding()
-                    .padding(bottom = 80.dp),
+                    .padding(bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -311,71 +316,67 @@ fun CompanyFormScreen(
                 )
                 Spacer(Modifier.height(16.dp))
 
-                // Using shared list from WorkerForm
-                workerWorkTypesList.forEach { type ->
-                    val typeName = when(type.iconRes) {
-                        R.drawable.repairing -> stringResource(R.string.cat_plumber)
-                        R.drawable.cleaning -> stringResource(R.string.cat_cleaning)
-                        R.drawable.carpenter -> stringResource(R.string.cat_carpenter)
-                        R.drawable.electrician -> stringResource(R.string.cat_electrician)
-                        else -> type.name
-                    }
-                    val isSelected = selectedWorkerTypes.contains(typeName)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                val newSet = if (isSelected)
-                                    selectedWorkerTypes - typeName
-                                else
-                                    selectedWorkerTypes + typeName
-                                selectedWorkerTypesString = newSet.joinToString("|")
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(type.iconRes),
-                                contentDescription = typeName,
-                                modifier = Modifier.size(36.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = typeName,
-                                fontSize = 15.sp,
-                                color = Color(0xFF282828),
-                                fontFamily = Questv1FontFamily
-                            )
-                        }
-                        // Circular Checkmark button matching WorkerForm
-                        Box(
+                LazyColumn(
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    items(workerWorkTypesList) { type ->
+                        val typeName = stringResource(type.labelRes)
+                        val isSelected = selectedWorkerTypes.contains(typeName)
+                        Row(
                             modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) Color(0xFF282828) else Color.Transparent
-                                )
-                                .border(
-                                    1.5.dp,
-                                    if (isSelected) Color(0xFF282828) else Color(0xFFCCCCCC),
-                                    CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .clickable {
+                                    val newSet = if (isSelected)
+                                        selectedWorkerTypes - typeName
+                                    else
+                                        selectedWorkerTypes + typeName
+                                    selectedWorkerTypesString = newSet.joinToString("|")
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            if (isSelected) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(type.iconRes),
+                                    contentDescription = typeName,
+                                    modifier = Modifier.size(36.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = typeName,
+                                    fontSize = 15.sp,
+                                    color = Color(0xFF282828),
+                                    fontFamily = Questv1FontFamily
                                 )
                             }
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) Color(0xFF282828) else Color.Transparent
+                                    )
+                                    .border(
+                                        1.5.dp,
+                                        if (isSelected) Color(0xFF282828) else Color(0xFFCCCCCC),
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
                         }
+                        HorizontalDivider(color = Color(0xFFF0F0F0))
                     }
-                    HorizontalDivider(color = Color(0xFFF0F0F0))
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -456,8 +457,8 @@ fun CompanyFormScreen(
                 Button(
                     onClick = {
                         showSuccessSheet = false
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = false }
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Home) { inclusive = false }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),

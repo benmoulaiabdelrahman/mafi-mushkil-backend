@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
+import com.vardash.mafimushkil.Routes
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.ui.theme.Accent
@@ -174,7 +175,7 @@ fun OnboardingScreen(navController: NavController) {
         SecurityVerificationSheet(
             onVerify = {
                 showSecuritySheet = false
-                navController.navigate("phone_verification")
+                navController.navigate(Routes.PhoneVerification)
             }
         )
     }

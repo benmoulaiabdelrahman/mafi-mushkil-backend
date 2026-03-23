@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.AuthState
 import com.vardash.mafimushkil.auth.AuthViewModel
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
@@ -274,12 +275,12 @@ fun OtpVerificationScreen(
             onGoHome = {
                 showSuccessSheet = false
                 if (isUpdate) {
-                    navController.navigate("my_profile") {
-                        popUpTo("my_profile") { inclusive = true }
+                    navController.navigate(Routes.MyProfile) {
+                        popUpTo(Routes.MyProfile) { inclusive = true }
                     }
                 } else {
-                    navController.navigate("home") {
-                        popUpTo("splash") { inclusive = true }
+                    navController.navigate(Routes.Home) {
+                        popUpTo(Routes.Splash) { inclusive = true }
                     }
                 }
             }

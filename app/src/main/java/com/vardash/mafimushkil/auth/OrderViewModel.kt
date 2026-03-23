@@ -10,11 +10,14 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.vardash.mafimushkil.models.Category
 import com.vardash.mafimushkil.models.Order
 import com.vardash.mafimushkil.models.SelectedCategory
+import com.vardash.mafimushkil.models.toEpochMillis
+import com.vardash.mafimushkil.models.toOrder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,8 +41,8 @@ orders/{orderId}
   status: "pending" | "accepted" | "confirmed" | "assigned" | "in_progress" | "completed" | "cancelled",
   address: string,
   details: string,
-  createdAt: number,
-  updatedAt: number,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
   confirmedByCustomer: boolean,
   fcmToken: string,
   cancellationReason: string,
@@ -102,11 +105,17 @@ class OrderViewModel : ViewModel() {
     private val _completedOrders = MutableStateFlow<List<Order>>(emptyList())
     val completedOrders: StateFlow<List<Order>> = _completedOrders.asStateFlow()
 
+    private val _allOrders = MutableStateFlow<List<Order>>(emptyList())
+    val allOrders: StateFlow<List<Order>> = _allOrders.asStateFlow()
+
     private val _selectedOrder = MutableStateFlow<Order?>(null)
     val selectedOrder: StateFlow<Order?> = _selectedOrder.asStateFlow()
 
     private val _orderState = MutableStateFlow<OrderState>(OrderState.Idle)
     val orderState: StateFlow<OrderState> = _orderState.asStateFlow()
+
+    private val notifiableStatuses = setOf("accepted", "confirmed", "assigned", "in_progress", "completed", "cancelled")
+    private var notificationsLastSeenAt: Long = 0L
 
     val pendingCategories = mutableStateListOf<SelectedCategory>()
     val pendingPhotos = mutableStateListOf<Uri>()
@@ -198,12 +207,12 @@ class OrderViewModel : ViewModel() {
                 if (snapshot != null) {
                     val allOrders = snapshot.documents.mapNotNull { doc ->
                         try {
-                            doc.toObject(Order::class.java)?.copy(orderId = doc.id)
+                            doc.toOrder()
                         } catch (e: Exception) {
                             Log.e("OrderViewModel", "Error parsing doc ${doc.id}: ${e.message}", e)
                             null
                         }
-                    }.sortedByDescending { it.createdAt }
+                    }.sortedByDescending { it.createdAt.toEpochMillis() }
 
                     _pendingOrders.value = allOrders.filter {
                         it.status.lowercase() in listOf("pending", "confirmed", "assigned", "accepted", "in_progress")
@@ -211,8 +220,34 @@ class OrderViewModel : ViewModel() {
                     _completedOrders.value = allOrders.filter {
                         it.status.lowercase() in listOf("completed", "cancelled")
                     }
+                    _allOrders.value = allOrders
+                    updateUnreadNotificationCount(allOrders)
                 }
             }
+    }
+
+    fun markNotificationsSeen() {
+        val latestNotificationTime = _allOrders.value
+            .filter { it.status.lowercase() in notifiableStatuses }
+            .maxOfOrNull { notificationTimestamp(it) }
+            ?: System.currentTimeMillis()
+
+        notificationsLastSeenAt = latestNotificationTime
+        updateUnreadNotificationCount(_allOrders.value)
+    }
+
+    private fun updateUnreadNotificationCount(orders: List<Order>) {
+        val unreadCount = orders.count { order ->
+            order.status.lowercase() in notifiableStatuses &&
+                notificationTimestamp(order) > notificationsLastSeenAt
+        }
+        NotificationBadgeStore.setUnreadCount(unreadCount)
+    }
+
+    private fun notificationTimestamp(order: Order): Long {
+        val updatedAt = order.updatedAt.toEpochMillis()
+        val createdAt = order.createdAt.toEpochMillis()
+        return maxOf(updatedAt, createdAt)
     }
 
     fun observeOrder(orderId: String) {
@@ -234,7 +269,7 @@ class OrderViewModel : ViewModel() {
                 }
 
                 if (snapshot != null && snapshot.exists()) {
-                    _selectedOrder.value = snapshot.toObject(Order::class.java)?.copy(orderId = snapshot.id)
+                    _selectedOrder.value = snapshot.toOrder()
                 } else {
                     _selectedOrder.value = null
                 }
@@ -259,7 +294,7 @@ class OrderViewModel : ViewModel() {
                         mapOf(
                             "status" to "confirmed",
                             "confirmedByCustomer" to true,
-                            "updatedAt" to System.currentTimeMillis()
+                            "updatedAt" to Timestamp.now()
                         )
                     )
                     .await()
@@ -278,56 +313,79 @@ class OrderViewModel : ViewModel() {
         checkoutUrl: String = "",
         reference: String = ""
     ) {
+        viewModelScope.launch {
+            completePayment(orderId, paymentId, checkoutUrl, reference)
+        }
+    }
+
+    suspend fun completePayment(
+        orderId: String,
+        paymentId: String,
+        checkoutUrl: String = "",
+        reference: String = ""
+    ) {
         if (orderId.isBlank()) return
 
-        viewModelScope.launch {
-            try {
-                val document = firestore.collection("orders").document(orderId).get().await()
-                val order = document.toObject(Order::class.java)?.copy(orderId = document.id) ?: return@launch
-                val now = System.currentTimeMillis()
-
-                val updatedPayments = order.payments.map { payment ->
-                    when {
-                        paymentId.isNotBlank() && payment.id == paymentId -> {
-                            payment.copy(
-                                status = "paid",
-                                paidDate = now,
-                                checkoutUrl = if (checkoutUrl.isBlank()) payment.checkoutUrl else checkoutUrl,
-                                reference = if (reference.isBlank()) payment.reference else reference
-                            )
-                        }
-                        else -> payment
-                    }
-                }
-
-                val paymentMaps = updatedPayments.map { payment ->
-                    mapOf(
-                        "id" to payment.id,
-                        "title" to payment.title,
-                        "amount" to payment.amount,
-                        "dueDate" to payment.dueDate,
-                        "status" to payment.status,
-                        "method" to payment.method,
-                        "paidDate" to payment.paidDate,
-                        "checkoutUrl" to payment.checkoutUrl,
-                        "reference" to payment.reference
-                    )
-                }
-
-                firestore.collection("orders")
-                    .document(orderId)
-                    .update(
-                        mapOf(
-                            "payments" to paymentMaps,
-                            "status" to "completed",
-                            "updatedAt" to now
-                        )
-                    )
-                    .await()
-            } catch (e: Exception) {
-                Log.e("OrderViewModel", "Error completing payment: ${e.message}", e)
-                _error.value = e.message
+        try {
+            Log.d(
+                "OrderViewModel",
+                "Marking payment completed for order=$orderId payment=$paymentId reference=${reference.ifBlank { "none" }}"
+            )
+            val document = firestore.collection("orders").document(orderId).get().await()
+            val order = document.toOrder()
+            val nowMillis = System.currentTimeMillis()
+            val nowTimestamp = Timestamp.now()
+            val completedPaymentId = paymentId.takeIf { it.isNotBlank() }
+                ?: order.payments.firstOrNull {
+                    it.status.lowercase() !in setOf("paid", "cleared", "completed")
+                }?.id
+            val shouldMarkPayment = { paymentIdCandidate: String? ->
+                completedPaymentId == null && order.payments.size == 1 ||
+                    completedPaymentId != null && paymentIdCandidate == completedPaymentId
             }
+
+            val updatedPayments = order.payments.map { payment ->
+                if (shouldMarkPayment(payment.id)) {
+                    payment.copy(
+                        status = "paid",
+                        paidDate = nowMillis,
+                        checkoutUrl = if (checkoutUrl.isBlank()) payment.checkoutUrl else checkoutUrl,
+                        reference = if (reference.isBlank()) payment.reference else reference
+                    )
+                } else {
+                    payment
+                }
+            }
+
+            val paymentMaps = updatedPayments.map { payment ->
+                mapOf(
+                    "id" to payment.id,
+                    "title" to payment.title,
+                    "amount" to payment.amount,
+                    "dueDate" to payment.dueDate,
+                    "status" to payment.status,
+                    "method" to payment.method,
+                    "paidDate" to if (shouldMarkPayment(payment.id)) nowTimestamp else payment.paidDate,
+                    "checkoutUrl" to payment.checkoutUrl,
+                    "reference" to payment.reference
+                )
+            }
+
+            firestore.collection("orders")
+                .document(orderId)
+                .update(
+                    mapOf(
+                        "payments" to paymentMaps,
+                        "status" to "completed",
+                        "updatedAt" to nowTimestamp
+                    )
+                )
+                .await()
+
+            Log.d("OrderViewModel", "Order $orderId marked completed after payment $paymentId")
+        } catch (e: Exception) {
+            Log.e("OrderViewModel", "Error completing payment: ${e.message}", e)
+            _error.value = e.message
         }
     }
 
@@ -350,8 +408,9 @@ class OrderViewModel : ViewModel() {
                 val uploadedUrls = photoUris.map { uri ->
                     CloudinaryManager.uploadOrderImage(context, uri)
                 }
+                val fcmToken = runCatching { FcmTokenManager.currentToken() }.getOrDefault("")
 
-                val now = System.currentTimeMillis()
+                val nowTimestamp = Timestamp.now()
                 val orderData = hashMapOf(
                     "userId" to uid,
                     "categories" to selectedCategories.map { category ->
@@ -365,8 +424,8 @@ class OrderViewModel : ViewModel() {
                     "details" to details,
                     "photoUrls" to uploadedUrls,
                     "status" to "pending",
-                    "createdAt" to now,
-                    "updatedAt" to now,
+                    "createdAt" to nowTimestamp,
+                    "updatedAt" to nowTimestamp,
                     "bookedServices" to emptyList<Map<String, Any>>(),
                     "workers" to emptyList<Map<String, Any>>(),
                     "assignedWorkers" to emptyList<Map<String, Any>>(),
@@ -375,7 +434,7 @@ class OrderViewModel : ViewModel() {
                     "discount" to 0.0,
                     "totalPrice" to 0.0,
                     "confirmedByCustomer" to false,
-                    "fcmToken" to "",
+                    "fcmToken" to fcmToken,
                     "cancellationReason" to ""
                 )
 

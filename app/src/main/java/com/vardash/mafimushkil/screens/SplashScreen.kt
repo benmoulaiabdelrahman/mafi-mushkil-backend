@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.AuthState
 import com.vardash.mafimushkil.auth.AuthViewModel
 import com.vardash.mafimushkil.ui.theme.Accent
@@ -31,22 +32,23 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    skipAutoNavigation: Boolean = false
 ) {
     val context = LocalContext.current
-    val authState by authViewModel.authState.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(skipAutoNavigation) {
         authViewModel.checkAuthState(context)
+        if (skipAutoNavigation) return@LaunchedEffect
         delay(2500)
         
-        if (authState is AuthState.Success) {
-            navController.navigate("home") {
-                popUpTo("splash") { inclusive = true }
+        if (authViewModel.authState.value is AuthState.Success) {
+            navController.navigate(Routes.Home) {
+                popUpTo(Routes.Splash) { inclusive = true }
             }
         } else {
-            navController.navigate("welcome") {
-                popUpTo("splash") { inclusive = true }
+            navController.navigate(Routes.Welcome) {
+                popUpTo(Routes.Splash) { inclusive = true }
             }
         }
     }

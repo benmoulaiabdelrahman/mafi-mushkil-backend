@@ -41,6 +41,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Size
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.ProfileState
 import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.auth.UserProfile
@@ -120,7 +121,7 @@ fun MyProfileScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { navController.navigate("edit_photo") }
+                    .clickable { navController.navigate(Routes.EditPhoto) }
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -196,7 +197,7 @@ fun MyProfileScreen(
             ProfileRow(
                 label = stringResource(R.string.profile_name),
                 value = userProfile.name.ifEmpty { stringResource(R.string.profile_not_set) },
-                onClick = { navController.navigate("edit_name") }
+                onClick = { navController.navigate(Routes.EditName) }
             )
 
             HorizontalDivider(color = Color(0xFFEEEEEE), modifier = Modifier.padding(horizontal = 20.dp))
@@ -206,7 +207,7 @@ fun MyProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        navController.navigate("edit_email")
+                        navController.navigate(Routes.EditEmail)
                     }
                     .padding(horizontal = 20.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -342,7 +343,7 @@ fun MyProfileScreen(
                     onClick = {
                         showEmailVerifiedSheet = false
                         if (!userProfile.isEmailVerified) {
-                            navController.navigate("edit_email")
+                            navController.navigate(Routes.EditEmail)
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -364,7 +365,7 @@ fun MyProfileScreen(
         UpdatePhoneSheet(
             onUpdate = {
                 showUpdatePhoneSheet = false
-                navController.navigate("update_phone")
+                navController.navigate(Routes.UpdatePhone)
             },
             onDismiss = { showUpdatePhoneSheet = false }
         )

@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -154,7 +155,10 @@ class AuthViewModel : ViewModel() {
                     "gender" to "",
                     "profilePhoto" to "",
                     "fcmToken" to "",
-                    "createdAt" to System.currentTimeMillis()
+                    "workerState" to "not",
+                    "workerExperience" to "",
+                    "workerServices" to "",
+                    "createdAt" to Timestamp.now()
                 )
                 userRef.set(userData).await()
             }
@@ -164,14 +168,14 @@ class AuthViewModel : ViewModel() {
 
     private suspend fun updateActiveSession(uid: String, token: String) {
         try {
-            firestore.collection("sessions").document(uid)
-                .set(
-                    hashMapOf(
-                        "activeToken" to token,
-                        "lastLogin" to System.currentTimeMillis(),
-                        "device" to android.os.Build.MODEL
-                    )
-                ).await()
+                firestore.collection("sessions").document(uid)
+                    .set(
+                        hashMapOf(
+                            "activeToken" to token,
+                            "lastLogin" to Timestamp.now(),
+                            "device" to android.os.Build.MODEL
+                        )
+                    ).await()
         } catch (_: Exception) {
         }
     }

@@ -2,9 +2,11 @@ package com.vardash.mafimushkil.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -29,6 +31,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
+import com.vardash.mafimushkil.auth.OrderViewModel
+import com.vardash.mafimushkil.models.Order
+import com.vardash.mafimushkil.models.toEpochMillis
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
@@ -44,12 +50,15 @@ enum class NotificationType {
 
 data class AppNotification(
     val id: String,
+    val orderId: String,
     val type: NotificationType,
     val title: String,       // e.g. "Order"
     val boldWord: String,    // e.g. "Accepted" — shown bold inline
     val message: String,
     val timeAgo: String,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val sortKey: Long = 0L,
+    val targetTab: Int = 0
 )
 
 // ── Helpers ──────────────────────────────────────────────
@@ -71,13 +80,99 @@ fun notificationIcon(type: NotificationType): ImageVector = when (type) {
     NotificationType.ANNOUNCEMENT    -> Icons.Outlined.Notifications
 }
 
+private fun notificationBadgeLabel(type: NotificationType): String = when (type) {
+    NotificationType.ORDER_ACCEPTED -> "مقبول"
+    NotificationType.ORDER_CONFIRMED -> "مؤكد"
+    NotificationType.ORDER_ASSIGNED -> "تم التعيين"
+    NotificationType.ORDER_COMPLETED -> "مكتمل"
+    NotificationType.ORDER_CANCELLED -> "ملغي"
+    NotificationType.ANNOUNCEMENT -> "إشعار"
+}
+
+@Composable
+private fun NotificationTypeBadge(type: NotificationType) {
+    val badgeColor = notificationColor(type)
+    Surface(
+        shape = RoundedCornerShape(50.dp),
+        border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.5f)),
+        color = Color.Transparent
+    ) {
+        Text(
+            text = notificationBadgeLabel(type),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = badgeColor,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            fontFamily = Questv1FontFamily
+        )
+    }
+}
+
+private fun notificationTypeForStatus(status: String): NotificationType? = when (status.lowercase()) {
+    "accepted" -> NotificationType.ORDER_ACCEPTED
+    "confirmed" -> NotificationType.ORDER_CONFIRMED
+    "assigned" -> NotificationType.ORDER_ASSIGNED
+    "in_progress" -> NotificationType.ORDER_ASSIGNED
+    "completed" -> NotificationType.ORDER_COMPLETED
+    "cancelled" -> NotificationType.ORDER_CANCELLED
+    else -> null
+}
+
+private fun notificationBoldWordForStatus(status: String): String = when (status.lowercase()) {
+    "accepted" -> "تم قبوله"
+    "confirmed" -> "تم تأكيده"
+    "assigned" -> "تم تعيين العمال"
+    "in_progress" -> "قيد التنفيذ"
+    "completed" -> "اكتمل الطلب"
+    "cancelled" -> "تم إلغاؤه"
+    else -> status
+}
+
+private fun notificationMessageForStatus(status: String): String = when (status.lowercase()) {
+    "accepted" -> "تم قبول طلبك. يرجى مراجعة التفاصيل وتأكيدها."
+    "confirmed" -> "تم تأكيد الطلب. سيتم تعيين العمال قريبًا."
+    "assigned" -> "تم تعيين العمال لطلبك."
+    "in_progress" -> "الطلب قيد التنفيذ الآن."
+    "completed" -> "تم إكمال طلبك. شكراً لك!"
+    "cancelled" -> "تم إلغاء طلبك."
+    else -> "تم تحديث الطلب."
+}
+
+private fun notificationTargetTabForStatus(status: String): Int = when (status.lowercase()) {
+    "completed", "cancelled" -> 1
+    else -> 0
+}
+
+@Composable
+private fun buildNotifications(orders: List<Order>): List<AppNotification> {
+    return orders.mapNotNull { order ->
+        val type = notificationTypeForStatus(order.status) ?: return@mapNotNull null
+        val timestamp = order.updatedAt.takeIf { it.toEpochMillis() != 0L } ?: order.createdAt
+        AppNotification(
+            id = order.orderId.ifBlank { "${order.status}_${timestamp.toEpochMillis()}" },
+            orderId = order.orderId,
+            type = type,
+            title = "تحديث الطلب",
+            boldWord = notificationBoldWordForStatus(order.status),
+            message = notificationMessageForStatus(order.status),
+            timeAgo = formatTimeAgoLocalized(timestamp),
+            sortKey = timestamp.toEpochMillis(),
+            targetTab = notificationTargetTabForStatus(order.status)
+        )
+    }.sortedByDescending { it.sortKey }
+}
+
 // ── Notification card ────────────────────────────────────
 @Composable
-fun NotificationCard(notification: AppNotification) {
+fun NotificationCard(
+    notification: AppNotification,
+    onClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(
@@ -104,19 +199,23 @@ fun NotificationCard(notification: AppNotification) {
 
             // Middle: title + message
             Column(modifier = Modifier.weight(1f)) {
-                // Title with bold word inline
-                Text(
-                    text = buildAnnotatedString {
-                        append(notification.title + " ")
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(notification.boldWord)
-                        }
-                    },
-                    fontSize = 14.sp,
-                    color = Color(0xFF1A1A1A),
-                    fontFamily = Questv1FontFamily
-                )
-                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = buildAnnotatedString {
+                            append(notification.title + " ")
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(notification.boldWord)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        fontSize = 14.sp,
+                        color = Color(0xFF1A1A1A),
+                        fontFamily = Questv1FontFamily
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    NotificationTypeBadge(notification.type)
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = notification.message,
                     fontSize = 12.sp,
@@ -151,10 +250,25 @@ fun NotificationCard(notification: AppNotification) {
 
 // ── Main screen ──────────────────────────────────────────
 @Composable
-fun NotificationsScreen(navController: NavController) {
+fun NotificationsScreen(
+    navController: NavController,
+    orderViewModel: OrderViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
+    val pendingOrders by orderViewModel.pendingOrders.collectAsState()
+    val completedOrders by orderViewModel.completedOrders.collectAsState()
+    val notifications = buildNotifications(pendingOrders + completedOrders)
+    var hasMarkedSeen by remember { mutableStateOf(false) }
 
-    // Empty list — will be replaced with real API data later
-    val notifications = remember { mutableStateListOf<AppNotification>() }
+    LaunchedEffect(Unit) {
+        orderViewModel.loadUserOrders()
+    }
+
+    LaunchedEffect(notifications.firstOrNull()?.sortKey, notifications.size) {
+        if (!hasMarkedSeen && notifications.isNotEmpty()) {
+            orderViewModel.markNotificationsSeen()
+            hasMarkedSeen = true
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
@@ -247,8 +361,22 @@ fun NotificationsScreen(navController: NavController) {
                         .fillMaxSize()
                         .background(Color(0xFFF7F8FA)) // Matched
                 ) {
-                    items(notifications) { notification ->
-                        NotificationCard(notification = notification)
+                    items(notifications, key = { it.id }) { notification ->
+                        NotificationCard(
+                            notification = notification,
+                            onClick = {
+                                orderViewModel.markNotificationsSeen()
+                                hasMarkedSeen = true
+                                navController.navigate(
+                                    Routes.orders(
+                                        tab = notification.targetTab,
+                                        focusOrderId = notification.orderId
+                                    )
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
                     }
                 }
             }

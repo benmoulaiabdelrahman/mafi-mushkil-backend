@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.vardash.mafimushkil.Routes
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
@@ -164,7 +165,7 @@ fun BecomeWorkerScreen(navController: NavController) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { navController.navigate("contact_us") },
+                        .clickable { navController.navigate(Routes.ContactUs) },
                     fontFamily = Questv1FontFamily
                 )
 
@@ -253,8 +254,8 @@ fun BecomeWorkerScreen(navController: NavController) {
                     Button(
                         onClick = {
                             showSuccessSheet = false
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = false }
+                            navController.navigate(Routes.Home) {
+                                popUpTo(Routes.Home) { inclusive = false }
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),

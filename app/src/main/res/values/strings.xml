@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MafiMushkil</string>
+    <string name="app_name">مافي مشكل</string>
     <string name="mafi_mushkil">Mafi\nMushkil</string>
     <string name="app_logo_desc">App Logo</string>
     <string name="pixel_io">Pixel IO</string>
@@ -65,6 +65,20 @@
     <string name="cat_electrician">Electrician</string>
     <string name="cat_plumber">Plumber</string>
     <string name="cat_carpenter">Carpenter</string>
+    <string name="cat_painter">Painter</string>
+    <string name="cat_mason">Mason / Contractor</string>
+    <string name="cat_roofing">Roofing / Waterproofing</string>
+    <string name="cat_ac_repair">AC Repair</string>
+    <string name="cat_glazier">Glazier</string>
+    <string name="cat_cook">Cook</string>
+    <string name="cat_babysitter">Babysitter</string>
+    <string name="cat_nurse">Home Nurse</string>
+    <string name="cat_car_wash">Car Wash</string>
+    <string name="cat_moving">Moving</string>
+    <string name="cat_gardener">Gardener</string>
+    <string name="cat_car_repair">Mechanic</string>
+    <string name="cat_delivery">Delivery</string>
+    <string name="cat_errands">Errands</string>
 
     <!-- Menu Drawer -->
     <string name="menu_profile">My profile</string>
@@ -95,7 +109,7 @@
     <string name="orders_empty_history_desc">You don\'t have any order history yet.</string>
     <string name="orders_completed">Your order is completed</string>
     <string name="orders_cancelled">Your order is cancelled</string>
-    <string name="orders_needed">%1$s needed...</string>
+    <string name="orders_needed">Required %1$s</string>
     <string name="orders_time_just_now">Just now</string>
     <string name="orders_time_mins_ago">%1$d mins ago</string>
     <string name="orders_time_hrs_ago">%1$d hrs ago</string>
@@ -111,23 +125,23 @@
     <string name="order_detail_attachments">Attachments</string>
     <string name="order_detail_show_more">Show more</string>
     <string name="order_detail_help_title">Do you need any help?</string>
-    <string name="order_detail_help_desc">After confirmation, we will assign workers for your order.</string>
-    <string name="order_detail_contact">Contact</string>
-    <string name="order_detail_booked_services">Booked Services</string>
-    <string name="order_detail_workers">Workers/Helpers</string>
-    <string name="order_detail_payments">Payments</string>
-    <string name="order_detail_confirm_warning">We have added items and prices in your order. Kindly confirm by tapping `Confirm Details` button.</string>
-    <string name="order_detail_confirm_button">Confirm Details</string>
+    <string name="order_detail_help_desc">بعد التأكيد، سنقوم بتعيين عمال لطلبك.</string>
+    <string name="order_detail_contact">اتصال</string>
+    <string name="order_detail_workers">العمال والمساعدون</string>
+    <string name="order_detail_payments">الدفع</string>
+    <string name="order_detail_booked_services">الخدمات المحجوزة</string>
+    <string name="order_detail_confirm_warning">لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى التأكيد عبر زر `تأكيد التفاصيل`.</string>
+    <string name="order_detail_confirm_button">تأكيد التفاصيل</string>
 
     <!-- Order Status Descriptions -->
-    <string name="desc_pending">We received your request and will get back to you as soon as we review the order.</string>
-    <string name="desc_accepted">We reviewed your request. Our team will contact you soon to provide a quote.</string>
-    <string name="desc_confirmed">You have confirmed your order. We are going to assign workers for your order.</string>
-    <string name="desc_assigned">Workers have been assigned to your order. They will soon start working on your order.</string>
-    <string name="desc_in_progress">Your order is in progress. Our workers will make sure to do quality work for you.</string>
-    <string name="desc_cancelled">We have cancelled this order because customer was not responding.</string>
-    <string name="desc_completed">Your order has successfully been completed. We hope that you have liked our services.</string>
-    <string name="desc_default">Your order is being processed.</string>
+    <string name="desc_pending">لقد تلقينا طلبك وسنعاود الاتصال بك بمجرد مراجعة الطلب.</string>
+    <string name="desc_accepted">لقد راجعنا طلبك. سيتواصل معك فريقنا قريباً لتقديم السعر.</string>
+    <string name="desc_confirmed">لقد أكدت طلبك. سنقوم الآن بتعيين العمال لطلبك.</string>
+    <string name="desc_assigned">تم تعيين العمال لطلبك. سيبدؤون العمل على طلبك قريباً.</string>
+    <string name="desc_in_progress">طلبك قيد التنفيذ الآن. سيحرص عمالنا على تقديم عمل جيد لك.</string>
+    <string name="desc_cancelled">لقد ألغينا هذا الطلب لأن العميل لم يستجب.</string>
+    <string name="desc_completed">تم إكمال طلبك بنجاح. نأمل أن تكون قد أعجبتك خدماتنا.</string>
+    <string name="desc_default">طلبك قيد المعالجة.</string>
 
     <!-- Order Status -->
     <string name="status_pending">Pending</string>

@@ -1,68 +1,55 @@
 package com.vardash.mafimushkil.screens
 
-import android.annotation.SuppressLint
-import android.graphics.Bitmap
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.foundation.Image
+import android.content.Intent
+import android.net.Uri
+import android.util.Log
+import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.auth.ChargilyManager
 import com.vardash.mafimushkil.auth.OrderViewModel
-import com.vardash.mafimushkil.models.Order
 import com.vardash.mafimushkil.models.Payment
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentsScreen(
     navController: NavController,
     orderId: String,
     orderViewModel: OrderViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val selectedOrder by orderViewModel.selectedOrder.collectAsState()
     val pendingOrders by orderViewModel.pendingOrders.collectAsState()
     val completedOrders by orderViewModel.completedOrders.collectAsState()
-    val selectedOrder by orderViewModel.selectedOrder.collectAsState()
-    val error by orderViewModel.error.collectAsState()
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val isLoading by orderViewModel.isLoading.collectAsState()
 
-    var checkoutUrl by remember { mutableStateOf<String?>(null) }
-    var checkoutReference by remember { mutableStateOf("") }
-    var checkoutPaymentId by remember { mutableStateOf("") }
     var isCreatingCheckout by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
 
@@ -71,32 +58,114 @@ fun PaymentsScreen(
     }
 
     DisposableEffect(orderId) {
-        onDispose {
-            orderViewModel.clearObservedOrder()
-        }
+        onDispose { orderViewModel.clearObservedOrder() }
     }
 
     val order = selectedOrder ?: (pendingOrders + completedOrders).find { it.orderId == orderId }
 
-    val activePayment = order?.payments?.firstOrNull { it.isPending() }
-    val remainingPayments = order?.payments?.filter { it.isPending() && it.id != activePayment?.id }.orEmpty()
+    // ── Payment availability logic ──────────────────────────────────────────
+    val normalizedStatus = order?.status?.lowercase()?.replace(' ', '_').orEmpty()
     val clearedPayments = order?.payments?.filter { it.isCleared() }.orEmpty()
+    val unpaidPayments = order?.payments?.filter { !it.isCleared() }.orEmpty()
+    val paidAmountSoFar = clearedPayments.sumOf { it.amount }
+
+    val derivedServicesTotal = order?.bookedServices?.sumOf { it.price * it.quantity } ?: 0.0
+    val serviceBasedTotal = order?.let {
+        (derivedServicesTotal + it.tax - it.discount).coerceAtLeast(0.0)
+    } ?: 0.0
+    val derivedOrderTotal = if (order != null) {
+        when {
+            serviceBasedTotal > 0.0 -> serviceBasedTotal
+            order.totalPrice > 0.0 -> order.totalPrice
+            else -> order.payments.sumOf { it.amount }
+        }
+    } else 0.0
+    val remainingAmount = (derivedOrderTotal - paidAmountSoFar).coerceAtLeast(0.0)
+
+    LaunchedEffect(orderId, order) {
+        if (order != null) {
+            Log.d(
+                "PaymentsScreen",
+                buildString {
+                    append("Order pricing breakdown for orderId=$orderId; ")
+                    append("status=${order.status}; ")
+                    append("bookedServices=${order.bookedServices.size}; ")
+                    append("tax=${order.tax}; ")
+                    append("discount=${order.discount}; ")
+                    append("totalPrice=${order.totalPrice}; ")
+                    append("derivedServicesTotal=$derivedServicesTotal; ")
+                    append("serviceBasedTotal=$serviceBasedTotal; ")
+                    append("derivedOrderTotal=$derivedOrderTotal; ")
+                    append("paidAmountSoFar=$paidAmountSoFar; ")
+                    append("remainingAmount=$remainingAmount")
+                }
+            )
+            order.bookedServices.forEachIndexed { index, service ->
+                Log.d(
+                    "PaymentsScreen",
+                    "bookedService[$index]=${service.name}, price=${service.price}, quantity=${service.quantity}"
+                )
+            }
+        }
+    }
+
+    // The payment object we will use to create the Chargily checkout.
+    // Visible / enabled only when the order is in_progress and money is still owed.
+    val duePayment: Payment? = when {
+        normalizedStatus != "in_progress" -> null
+        remainingAmount > 0.0 -> {
+            val template = unpaidPayments.firstOrNull() ?: Payment(
+                id = "generated_active_payment",
+                title = "الخدمات المحجوزة",
+                amount = remainingAmount,
+                status = "pending"
+            )
+            template.copy(amount = remainingAmount)
+        }
+        unpaidPayments.isNotEmpty() -> unpaidPayments.first()
+        else -> null
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    fun openUrl(url: String) {
+        try {
+            Log.d("PaymentsScreen", "Opening checkout URL: $url")
+            val customTabsIntent = CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .build()
+            customTabsIntent.intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY
+            )
+            customTabsIntent.launchUrl(context, Uri.parse(url))
+        } catch (e: Exception) {
+            Log.e("PaymentsScreen", "Custom tab failed, falling back", e)
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
+            }
+            context.startActivity(intent)
+        }
+    }
 
     fun launchCheckout(payment: Payment) {
         scope.launch {
             isCreatingCheckout = true
             localError = null
             try {
+                Log.d("PaymentsScreen", "Creating checkout for orderId=$orderId")
                 val session = ChargilyManager.createCheckout(
                     orderId = orderId,
                     payment = payment,
-                    customerId = FirebaseAuth.getInstance().currentUser?.uid
+                    userId = FirebaseAuth.getInstance().currentUser?.uid
                 )
-                checkoutReference = session.reference
-                checkoutPaymentId = payment.id
-                checkoutUrl = session.checkoutUrl
+                if (session.checkoutUrl.isBlank()) {
+                    throw IllegalStateException("Chargily returned an empty checkout URL")
+                }
+                openUrl(session.checkoutUrl)
             } catch (e: Exception) {
-                localError = e.message ?: "Unable to create checkout"
+                Log.e("PaymentsScreen", "Checkout creation failed", e)
+                localError = e.message ?: "تعذر إنشاء رابط الدفع"
+                Toast.makeText(context, localError, Toast.LENGTH_LONG).show()
             } finally {
                 isCreatingCheckout = false
             }
@@ -104,521 +173,245 @@ fun PaymentsScreen(
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            Surface(color = Color.White) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.order_detail_payments),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        fontFamily = Questv1FontFamily
+                    )
+                }
+            }
+        },
         containerColor = Color.White
-    ) { paddingValues ->
-        Column(
+    ) { padding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
                 .background(Color(0xFFF7F8FA))
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
+            when {
+                isLoading && order == null -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.Black
+                    )
+                }
+                order != null -> {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
+                        // ── Booked services card ────────────────────────────
+                        if (order.bookedServices.isNotEmpty()) {
+                            Surface(
+                                color = Color.White,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.order_detail_booked_services),
+                                        color = Color(0xFF888888),
+                                        fontSize = 14.sp,
+                                        fontFamily = Questv1FontFamily
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    order.bookedServices.forEach { service ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = if (service.quantity > 1)
+                                                    "${service.name} x${service.quantity}"
+                                                else service.name,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF1A1A1A),
+                                                fontFamily = Questv1FontFamily
+                                            )
+                                            CurrencyAmount(
+                                                amountText = formatPriceValue(service.price * service.quantity)
+                                            )
+                                        }
+                                    }
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        color = Color(0xFFEEEEEE)
+                                    )
+                                    if (order.discount > 0.0) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 2.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                "الخصم",
+                                                color = Color(0xFF888888),
+                                                fontFamily = Questv1FontFamily
+                                            )
+                                            CurrencyAmount(
+                                                amountText = formatPriceValue(order.discount),
+                                                prefix = "-"
+                                            )
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "الإجمالي:",
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 18.sp,
+                                            color = Color(0xFF1A1A1A),
+                                            fontFamily = Questv1FontFamily
+                                        )
+                                        CurrencyAmount(
+                                            amountText = formatPriceValue(derivedOrderTotal),
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 18.sp
+                                        )
+                                    }
+                                }
+                            }
                         }
-                        Text(
-                            text = "Payments",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f),
-                            fontFamily = Questv1FontFamily
-                        )
-                    }
-                    HorizontalDivider(color = Color(0xFFF5F5F5))
-                }
-            }
 
-            if (order == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Color.Black)
-                }
-            } else {
-                val amountPaid = clearedPayments.sumOf { it.amount }
-                val totalAmount = if (order.totalPrice > 0.0) order.totalPrice else order.payments.sumOf { it.amount }
-                val remainingAmount = (totalAmount - amountPaid).coerceAtLeast(0.0)
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    DetailSection {
-                        SectionHeader("Active payment")
-                        Spacer(Modifier.height(12.dp))
-                        if (activePayment == null) {
-                            EmptyPaymentText("There is no active payment right now.")
-                        } else {
-                            ActivePaymentCard(
-                                payment = activePayment,
-                                isLoading = isCreatingCheckout,
-                                onPayNow = { launchCheckout(activePayment) }
-                            )
-                        }
-                    }
-
-                    DetailSection {
-                        SectionHeader("Remaining payments")
-                        Spacer(Modifier.height(12.dp))
-                        if (remainingPayments.isEmpty()) {
-                            EmptyPaymentText("No remaining payments.")
-                        } else {
-                            remainingPayments.forEachIndexed { index, payment ->
-                                ExpandablePaymentRow(
-                                    payment = payment,
-                                    showStatus = false
+                        // ── Error message ───────────────────────────────────
+                        if (!localError.isNullOrBlank()) {
+                            Surface(
+                                color = Color.White,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 16.dp)
+                            ) {
+                                Text(
+                                    text = localError!!,
+                                    color = Color(0xFFF44336),
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp,
+                                    fontFamily = Questv1FontFamily,
+                                    modifier = Modifier.padding(16.dp)
                                 )
-                                if (index != remainingPayments.lastIndex) {
-                                    HorizontalDivider(color = Color(0xFFF1F1F1))
-                                }
                             }
                         }
-                    }
 
-                    DetailSection {
-                        SectionHeader("Cleared payments")
-                        Spacer(Modifier.height(12.dp))
-                        if (clearedPayments.isEmpty()) {
-                            EmptyPaymentText("No cleared payments yet.")
-                        } else {
-                            clearedPayments.forEachIndexed { index, payment ->
-                                ClearedPaymentRow(payment = payment)
-                                if (index != clearedPayments.lastIndex) {
-                                    HorizontalDivider(color = Color(0xFFF1F1F1))
-                                }
+                        Spacer(Modifier.height(16.dp))
+
+                        // ── Pay button ──────────────────────────────────────
+                        Button(
+                            onClick = {
+                                if (duePayment != null) launchCheckout(duePayment)
+                            },
+                            enabled = duePayment != null && !isCreatingCheckout,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF282828),
+                                disabledContainerColor = Color(0xFFE0E0E0),
+                                contentColor = Color.White,
+                                disabledContentColor = Color(0xFF888888)
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(0.dp)
+                        ) {
+                            if (isCreatingCheckout) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = "ادفع الآن",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = Questv1FontFamily
+                                )
                             }
                         }
-                    }
 
-                    DetailSection {
-                        SectionHeader("Payments summary")
-                        Spacer(Modifier.height(12.dp))
-                        SummaryRow(label = "Total Amount", value = formatDzd(totalAmount), bold = false)
-                        Spacer(Modifier.height(10.dp))
-                        SummaryRow(label = "Amount paid", value = formatDzd(amountPaid), bold = false)
-                        Spacer(Modifier.height(10.dp))
-                        SummaryRow(label = "Remaining Amount", value = formatDzd(remainingAmount), bold = true)
-                    }
-
-                    val resolvedError = localError ?: error
-                    if (!resolvedError.isNullOrBlank()) {
-                        DetailSection {
-                            Text(
-                                text = resolvedError,
-                                color = Color(0xFFF44336),
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp,
-                                fontFamily = Questv1FontFamily
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(24.dp))
-                }
-            }
-        }
-    }
-
-    if (checkoutUrl != null && order != null) {
-        PaymentCheckoutDialog(
-            checkoutUrl = checkoutUrl!!,
-            onClose = { checkoutUrl = null },
-            onPaymentSuccess = {
-                orderViewModel.markPaymentCompleted(
-                    orderId = order.orderId,
-                    paymentId = checkoutPaymentId,
-                    checkoutUrl = checkoutUrl!!,
-                    reference = checkoutReference
-                )
-                checkoutUrl = null
-            },
-            onPaymentFailure = {
-                checkoutUrl = null
-            }
-        )
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        color = Color(0xFF888888),
-        fontSize = 14.sp,
-        fontFamily = Questv1FontFamily
-    )
-}
-
-@Composable
-private fun EmptyPaymentText(text: String) {
-    Text(
-        text = text,
-        color = Color(0xFF888888),
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        fontFamily = Questv1FontFamily
-    )
-}
-
-@Composable
-private fun ActivePaymentCard(
-    payment: Payment,
-    isLoading: Boolean,
-    onPayNow: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = payment.title.ifBlank { "Material payment" },
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = Color(0xFF1A1A1A),
-            fontFamily = Questv1FontFamily
-        )
-        Spacer(Modifier.height(16.dp))
-        PaymentInfoRow(label = "Amount", value = formatDzd(payment.amount))
-        Spacer(Modifier.height(8.dp))
-        PaymentInfoRow(label = "Due Date", value = formatDate(payment.dueDate))
-        Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = onPayNow,
-            enabled = !isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF54B65F)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Text(
-                    text = "PAY NOW",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = Questv1FontFamily
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PaymentInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            color = Color(0xFF888888),
-            fontSize = 14.sp,
-            fontFamily = Questv1FontFamily
-        )
-        Text(
-            text = value,
-            color = Color(0xFF1A1A1A),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = Questv1FontFamily
-        )
-    }
-}
-
-@Composable
-private fun ExpandablePaymentRow(
-    payment: Payment,
-    showStatus: Boolean
-) {
-    var expanded by remember(payment.id) { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
-            .padding(vertical = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = payment.title.ifBlank { "Payment Amount" },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = Color(0xFF1A1A1A),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    fontFamily = Questv1FontFamily
-                )
-                if (showStatus) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = payment.status.replaceFirstChar { it.uppercase() },
-                        fontSize = 12.sp,
-                        color = Color(0xFF888888),
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = formatDzd(payment.amount),
-                color = Color(0xFF1A1A1A),
-                fontWeight = FontWeight.Bold,
-                fontFamily = Questv1FontFamily
-            )
-            Spacer(Modifier.width(12.dp))
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = null,
-                tint = Color(0xFFBBBBBB),
-                modifier = Modifier.size(14.dp)
-            )
-        }
-        if (expanded) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = "Due Date: ${formatDate(payment.dueDate)}",
-                color = Color(0xFF888888),
-                fontSize = 13.sp,
-                fontFamily = Questv1FontFamily
-            )
-        }
-    }
-}
-
-@Composable
-private fun ClearedPaymentRow(payment: Payment) {
-    var expanded by remember(payment.id) { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
-            .padding(vertical = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF3F3F3)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (payment.method.lowercase().contains("cash")) {
-                        Icon(
-                            imageVector = Icons.Filled.AttachMoney,
-                            contentDescription = null,
-                            tint = Color(0xFF1A1A1A)
-                        )
-                    } else if (payment.method.lowercase().contains("cib") || payment.method.lowercase().contains("edahabia")) {
-                        Image(
-                            painter = painterResource(R.drawable.wallet),
-                            contentDescription = null,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Outlined.Payments,
-                            contentDescription = null,
-                            tint = Color(0xFF1A1A1A)
-                        )
+                        Spacer(Modifier.height(24.dp))
                     }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Amount paid",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Color(0xFF1A1A1A),
-                        fontFamily = Questv1FontFamily
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = formatDzd(payment.amount),
-                        fontSize = 13.sp,
-                        color = Color(0xFF888888),
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = null,
-                tint = Color(0xFFBBBBBB),
-                modifier = Modifier.size(14.dp)
-            )
-        }
-        if (expanded) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = "Paid on ${formatDate(payment.paidDate)}",
-                color = Color(0xFF888888),
-                fontSize = 13.sp,
-                fontFamily = Questv1FontFamily
-            )
-        }
-    }
-}
-
-@Composable
-private fun SummaryRow(label: String, value: String, bold: Boolean) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            color = Color(0xFF1A1A1A),
-            fontSize = 15.sp,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            fontFamily = Questv1FontFamily
-        )
-        Text(
-            text = value,
-            color = Color(0xFF1A1A1A),
-            fontSize = 15.sp,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            fontFamily = Questv1FontFamily
-        )
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
-@Composable
-private fun PaymentCheckoutDialog(
-    checkoutUrl: String,
-    onClose: () -> Unit,
-    onPaymentSuccess: () -> Unit,
-    onPaymentFailure: () -> Unit
-) {
-    Dialog(
-        onDismissRequest = onClose,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Scaffold(
-            topBar = {
-                Surface(color = Color.White) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                else -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        IconButton(onClick = onClose) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
-                        }
-                        Text(
-                            text = "Payments",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f),
-                            fontFamily = Questv1FontFamily
-                        )
+                        CircularProgressIndicator(color = Color.Black)
                     }
                 }
-            },
-            containerColor = Color.White
-        ) { paddingValues ->
-            AndroidView(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                factory = { context ->
-                    WebView(context).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                                handleRedirect(url, onPaymentSuccess, onPaymentFailure)
-                            }
+            }
+        }
+    }
+}
 
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                val targetUrl = request?.url?.toString()
-                                return handleRedirect(targetUrl, onPaymentSuccess, onPaymentFailure)
-                            }
-                        }
-                        loadUrl(checkoutUrl)
-                    }
-                }
+@Composable
+private fun CurrencyAmount(
+    amountText: String,
+    fontWeight: FontWeight = FontWeight.Bold,
+    fontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
+    prefix: String = ""
+) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (prefix.isNotBlank()) {
+                Text(
+                    text = prefix,
+                    fontWeight = fontWeight,
+                    fontSize = fontSize,
+                    color = Color(0xFF1A1A1A),
+                    fontFamily = Questv1FontFamily
+                )
+                Spacer(Modifier.width(2.dp))
+            }
+            Text(
+                text = "دج",
+                fontWeight = fontWeight,
+                fontSize = fontSize,
+                color = Color(0xFF1A1A1A),
+                fontFamily = Questv1FontFamily
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = amountText,
+                fontWeight = fontWeight,
+                fontSize = fontSize,
+                color = Color(0xFF1A1A1A),
+                fontFamily = Questv1FontFamily
             )
         }
     }
 }
 
-private fun handleRedirect(
-    url: String?,
-    onPaymentSuccess: () -> Unit,
-    onPaymentFailure: () -> Unit
-): Boolean {
-    if (url.isNullOrBlank()) return false
-    return when {
-        url.startsWith("https://mafimushkil.app/payments/success") -> {
-            onPaymentSuccess()
-            true
-        }
-        url.startsWith("https://mafimushkil.app/payments/failure") -> {
-            onPaymentFailure()
-            true
-        }
-        else -> false
-    }
-}
+private fun formatPriceValue(amount: Double): String =
+    if (amount % 1.0 == 0.0) String.format(Locale.US, "%.0f", amount)
+    else String.format(Locale.US, "%.2f", amount)
 
-private fun Payment.isPending(): Boolean = status.lowercase() in setOf("pending", "active", "unpaid", "due")
-
-private fun Payment.isCleared(): Boolean = status.lowercase() in setOf("paid", "cleared", "completed")
-
-private fun formatDzd(amount: Double): String = "${String.format(Locale.US, "%.2f", amount)} DZD"
-
-private fun formatDate(timeMillis: Long): String {
-    if (timeMillis <= 0L) return "N/A"
-    return SimpleDateFormat("dd MMM yyyy", Locale.forLanguageTag("ar-u-nu-latn")).format(Date(timeMillis))
-}
+private fun Payment.isCleared(): Boolean =
+    status.lowercase() in setOf("paid", "cleared", "completed")

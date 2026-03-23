@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
@@ -169,7 +170,7 @@ fun RegisterCompanyScreen(navController: NavController) {
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { navController.navigate("contact_us") }
+                            .clickable { navController.navigate(Routes.ContactUs) }
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         fontFamily = Questv1FontFamily
                     )
@@ -260,8 +261,8 @@ fun RegisterCompanyScreen(navController: NavController) {
                     Button(
                         onClick = {
                             showSuccessSheet = false
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = false }
+                            navController.navigate(Routes.Home) {
+                                popUpTo(Routes.Home) { inclusive = false }
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),

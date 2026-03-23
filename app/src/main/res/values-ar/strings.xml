@@ -65,6 +65,20 @@
     <string name="cat_electrician">كهربائي</string>
     <string name="cat_plumber">سباك</string>
     <string name="cat_carpenter">نجار</string>
+    <string name="cat_painter">دهان</string>
+    <string name="cat_mason">بناء / مقاول</string>
+    <string name="cat_roofing">سقف / عزل</string>
+    <string name="cat_ac_repair">تكييف وتبريد</string>
+    <string name="cat_glazier">زجاج</string>
+    <string name="cat_cook">طباخ</string>
+    <string name="cat_babysitter">مربية</string>
+    <string name="cat_nurse">ممرض منزلي</string>
+    <string name="cat_car_wash">غسيل سيارات</string>
+    <string name="cat_moving">نقل أثاث</string>
+    <string name="cat_gardener">بستاني</string>
+    <string name="cat_car_repair">إصلاح سيارات</string>
+    <string name="cat_delivery">توصيل</string>
+    <string name="cat_errands">قضاء حوائج</string>
 
     <!-- Menu Drawer -->
     <string name="menu_profile">حسابي الشخصي</string>
@@ -91,7 +105,7 @@
     <string name="orders_empty_history_desc">ليس لديك أي سجل طلبات بعد.</string>
     <string name="orders_completed">اكتمل طلبك</string>
     <string name="orders_cancelled">تم إلغاء طلبك</string>
-    <string name="orders_needed">مطلوب %1$s...</string>
+    <string name="orders_needed">مطلوب %1$s</string>
     <string name="orders_time_just_now">الآن</string>
     <string name="orders_time_mins_ago">منذ %1$d دقيقة</string>
     <string name="orders_time_hrs_ago">منذ %1$d ساعة</string>
@@ -109,10 +123,15 @@
     <string name="order_detail_help_title">هل تحتاج إلى أي مساعدة؟</string>
     <string name="order_detail_help_desc">بعد التأكيد، سنقوم بتعيين عمال لطلبك.</string>
     <string name="order_detail_contact">اتصال</string>
+    <string name="order_detail_workers">العمال والمساعدون</string>
+    <string name="order_detail_payments">الدفع</string>
 
     <!-- Order Status Descriptions -->
     <string name="desc_pending">لقد تلقينا طلبك وسنعاود الاتصال بك بمجرد مراجعة الطلب.</string>
-    <string name="desc_accepted">لقد راجعنا طلبك. سيتصل بك فريقنا قريباً لتقديم عرض سعر.</string>
+    <string name="desc_accepted">لقد راجعنا طلبك</string>
+    <string name="desc_confirmed">لقد أكدت طلبك. سنقوم الآن بتعيين العمال لطلبك.</string>
+    <string name="desc_assigned">تم تعيين العمال لطلبك. سيبدؤون العمل على طلبك قريباً.</string>
+    <string name="desc_in_progress">طلبك قيد التنفيذ الآن. سيحرص عمالنا على تقديم عمل جيد لك.</string>
     <string name="desc_cancelled">لقد ألغينا هذا الطلب لأن العميل لم يستجب.</string>
     <string name="desc_completed">تم إكمال الطلب بنجاح. شكراً لاستخدامك مافي مشكل.</string>
     <string name="desc_default">طلبك قيد المعالجة.</string>

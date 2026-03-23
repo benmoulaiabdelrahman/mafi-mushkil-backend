@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.ui.theme.Accent
 import com.vardash.mafimushkil.ui.theme.Primary
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
@@ -72,7 +73,7 @@ fun WelcomeScreen(navController: NavController) {
         }
 
         Button(
-            onClick = { navController.navigate("onboarding") },
+            onClick = { navController.navigate(Routes.Onboarding) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 38.dp)

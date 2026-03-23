@@ -32,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.AuthState
 import com.vardash.mafimushkil.auth.AuthViewModel
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
@@ -66,9 +67,9 @@ fun PhoneVerificationScreen(
             is AuthState.CodeSent -> {
                 val fullPhone = "$countryCode$phoneNumber"
                 if (isUpdate) {
-                    navController.navigate("update_otp/$fullPhone")
+                    navController.navigate(Routes.updateOtp(fullPhone))
                 } else {
-                    navController.navigate("otp_verification/$fullPhone")
+                    navController.navigate(Routes.otpVerification(fullPhone))
                 }
             }
             else -> {}
@@ -94,8 +95,8 @@ fun PhoneVerificationScreen(
                     if (isUpdate) {
                         navController.popBackStack()
                     } else {
-                        navController.navigate("home") {
-                            popUpTo("splash") { inclusive = true }
+                        navController.navigate(Routes.Home) {
+                            popUpTo(Routes.Splash) { inclusive = true }
                         }
                     }
                 },
