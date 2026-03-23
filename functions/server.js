@@ -158,10 +158,6 @@ db.collection("orders").onSnapshot(
             channelId: "mafi_mushkil_order_updates",
           },
         },
-        notification: {
-          title: "تحديث الطلب",
-          body,
-        },
         data: {
           orderId,
           status,
