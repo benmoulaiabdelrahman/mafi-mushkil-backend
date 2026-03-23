@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -78,34 +77,6 @@ fun notificationIcon(type: NotificationType): ImageVector = when (type) {
     NotificationType.ORDER_COMPLETED -> Icons.Outlined.CheckCircle
     NotificationType.ORDER_CANCELLED -> Icons.Outlined.Cancel
     NotificationType.ANNOUNCEMENT    -> Icons.Outlined.Notifications
-}
-
-private fun notificationBadgeLabel(type: NotificationType): String = when (type) {
-    NotificationType.ORDER_ACCEPTED -> "مقبول"
-    NotificationType.ORDER_CONFIRMED -> "مؤكد"
-    NotificationType.ORDER_ASSIGNED -> "تم التعيين"
-    NotificationType.ORDER_COMPLETED -> "مكتمل"
-    NotificationType.ORDER_CANCELLED -> "ملغي"
-    NotificationType.ANNOUNCEMENT -> "إشعار"
-}
-
-@Composable
-private fun NotificationTypeBadge(type: NotificationType) {
-    val badgeColor = notificationColor(type)
-    Surface(
-        shape = RoundedCornerShape(50.dp),
-        border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.5f)),
-        color = Color.Transparent
-    ) {
-        Text(
-            text = notificationBadgeLabel(type),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = badgeColor,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            fontFamily = Questv1FontFamily
-        )
-    }
 }
 
 private fun notificationTypeForStatus(status: String): NotificationType? = when (status.lowercase()) {
@@ -199,23 +170,18 @@ fun NotificationCard(
 
             // Middle: title + message
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = buildAnnotatedString {
-                            append(notification.title + " ")
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                                append(notification.boldWord)
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        fontSize = 14.sp,
-                        color = Color(0xFF1A1A1A),
-                        fontFamily = Questv1FontFamily
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    NotificationTypeBadge(notification.type)
-                }
-                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = buildAnnotatedString {
+                        append(notification.title + " ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(notification.boldWord)
+                        }
+                    },
+                    fontSize = 14.sp,
+                    color = Color(0xFF1A1A1A),
+                    fontFamily = Questv1FontFamily
+                )
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = notification.message,
                     fontSize = 12.sp,
