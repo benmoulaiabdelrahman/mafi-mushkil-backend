@@ -50,6 +50,8 @@ class MafiMushkilMessagingService : FirebaseMessagingService() {
         val orderId = remoteMessage.data["orderId"].orEmpty()
         val status = remoteMessage.data["status"].orEmpty()
         val badgeColor = notificationColorForStatus(status)
+        val notificationTag = notificationTagForOrder(orderId)
+        val notificationId = notificationTag.hashCode()
 
         val launchIntent = Intent(Intent.ACTION_VIEW).apply {
             addCategory(Intent.CATEGORY_BROWSABLE)
@@ -70,6 +72,7 @@ class MafiMushkilMessagingService : FirebaseMessagingService() {
             .setLargeIcon(createStatusBadgeBitmap(status))
             .setColor(badgeColor)
             .setColorized(true)
+            .setOnlyAlertOnce(true)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
@@ -79,7 +82,7 @@ class MafiMushkilMessagingService : FirebaseMessagingService() {
             .build()
 
         if (canPostNotifications()) {
-            NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), notification)
+            NotificationManagerCompat.from(this).notify(notificationTag, notificationId, notification)
         }
     }
 
@@ -119,6 +122,14 @@ class MafiMushkilMessagingService : FirebaseMessagingService() {
             "completed" -> android.graphics.Color.parseColor("#4CAF50")
             "cancelled" -> android.graphics.Color.parseColor("#F44336")
             else -> android.graphics.Color.parseColor("#282828")
+        }
+    }
+
+    private fun notificationTagForOrder(orderId: String): String {
+        return if (orderId.isBlank()) {
+            "order_update_default"
+        } else {
+            "order_update_$orderId"
         }
     }
 

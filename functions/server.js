@@ -154,6 +154,10 @@ db.collection("orders").onSnapshot(
         token: fcmToken,
         android: {
           priority: "high",
+          notification: {
+            channelId: "mafi_mushkil_order_updates_v2",
+            tag: orderId ? `order_update_${orderId}` : "order_update_default",
+          },
         },
         notification: {
           title: "تحديث الطلب",
