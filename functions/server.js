@@ -19,13 +19,22 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 const STATUS_MESSAGES = {
-  accepted: "Your order has been accepted! Please review and confirm the details.",
-  cancelled: "Your order was cancelled.",
-  confirmed: "Order confirmed. Workers will be assigned soon.",
-  assigned: "Workers have been assigned to your order.",
-  in_progress: "Your order is now in progress.",
-  completed: "Your order has been completed. Thank you!",
+  accepted: "تم قبول طلبك. يرجى مراجعة التفاصيل وتأكيدها.",
+  cancelled: "تم إلغاء طلبك.",
+  confirmed: "تم تأكيد الطلب. سيتم تعيين العمال قريبًا.",
+  assigned: "تم تعيين العمال لطلبك.",
+  in_progress: "الطلب قيد التنفيذ الآن.",
+  completed: "تم إكمال طلبك. شكرًا لك!",
 };
+
+const NOTIFY_STATUSES = new Set([
+  "accepted",
+  "confirmed",
+  "assigned",
+  "in_progress",
+  "completed",
+  "cancelled",
+]);
 
 app.use(express.json({ limit: "1mb" }));
 
@@ -131,23 +140,36 @@ db.collection("orders").onSnapshot(
         return;
       }
 
+      if (!NOTIFY_STATUSES.has(status)) {
+        return;
+      }
+
       const fcmToken = order.fcmToken;
       if (!fcmToken) {
         return;
       }
 
-      const body = STATUS_MESSAGES[status] || `Your order status is now ${status}.`;
+      const body = STATUS_MESSAGES[status] || `تم تحديث حالة طلبك إلى ${status}.`;
       const message = {
         token: fcmToken,
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "mafi_mushkil_order_updates",
+          },
+        },
         notification: {
-          title: "Order update",
+          title: "تحديث الطلب",
           body,
         },
         data: {
           orderId,
           status,
-          title: "Order update",
+          title: "تحديث الطلب",
           body,
+          open_orders_tab: "true",
+          tab: ["completed", "cancelled"].includes(status) ? "1" : "0",
+          focusOrderId: orderId,
         },
       };
 
