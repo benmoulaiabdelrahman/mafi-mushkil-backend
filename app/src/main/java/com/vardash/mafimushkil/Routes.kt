@@ -5,6 +5,7 @@ object Routes {
     const val Welcome = "welcome"
     const val Onboarding = "onboarding"
     const val Home = "home"
+    const val Services = "services"
     const val Orders = "orders"
     const val Promotions = "promotions"
     const val Notifications = "notifications"
@@ -31,6 +32,9 @@ object Routes {
     const val WorkerForm = "worker_form"
     const val RegisterCompany = "register_company"
     const val CompanyForm = "company_form"
+    const val ServiceOrderDetail = "service_order_detail"
+    const val ServiceOrderMap = "service_order_map"
+    const val RevokeRegistration = "revoke_registration"
 
     fun categories(mode: String = "fresh"): String = "$Categories?mode=$mode"
     fun placeOrder(categoryId: String, categoryName: String, iconName: String = "cleaning"): String =
@@ -38,7 +42,10 @@ object Routes {
     fun details(initialDetails: String = ""): String = "$Details?initialDetails=$initialDetails"
     fun orders(tab: Int = 0, focusOrderId: String = ""): String = "$Orders?tab=$tab&focusOrderId=$focusOrderId"
     fun orderDetail(orderId: String): String = "$OrderDetail/$orderId"
+    fun serviceOrderDetail(orderId: String): String = "$ServiceOrderDetail/$orderId"
+    fun serviceOrderMap(orderId: String): String = "$ServiceOrderMap/$orderId"
     fun payments(orderId: String): String = "$Payments/$orderId"
     fun otpVerification(phoneNumber: String): String = "$OtpVerification/$phoneNumber"
     fun updateOtp(phoneNumber: String): String = "$UpdateOtp/$phoneNumber"
+    fun revokeRegistration(target: String): String = "$RevokeRegistration/$target"
 }

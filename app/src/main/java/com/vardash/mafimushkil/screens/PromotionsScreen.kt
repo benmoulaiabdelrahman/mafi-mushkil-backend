@@ -7,25 +7,33 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
+import com.vardash.mafimushkil.auth.ProfileViewModel
+import com.vardash.mafimushkil.auth.PromotionViewModel
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
@@ -127,59 +135,53 @@ fun PromotionCard(promotion: Promotion) {
 }
 
 @Composable
-fun PromotionsScreen(navController: NavController) {
+fun PromotionsScreen(
+    navController: NavController,
+    profileViewModel: ProfileViewModel = viewModel(),
+    promotionViewModel: PromotionViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val promotions by promotionViewModel.promotions.collectAsState()
+    val isLoading by promotionViewModel.isLoading.collectAsState()
 
-    // Empty list — will be replaced with real API data later
-    val promotions = remember { mutableStateListOf<Promotion>() }
+    LaunchedEffect(Unit) {
+        promotionViewModel.loadPromotions(context)
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
-        bottomBar = {
-            // Wrap NavigationBar in a Box that extends white background behind system nav buttons
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White) // white fills behind system buttons
-            ) {
-                AppBottomBar(navController = navController, selectedIndex = 2)
+            bottomBar = {
+                // Wrap NavigationBar in a Box that extends white background behind system nav buttons
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White) // white fills behind system buttons
+                ) {
+                    AppBottomBar(
+                        navController = navController,
+                        selectedRoute = Routes.Promotions,
+                        profileViewModel = profileViewModel
+                    )
+                }
             }
-        }
-    ) { paddingValues ->
+        ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF7F8FA)) // Matched with Home and Order screens
                 .padding(bottom = paddingValues.calculateBottomPadding())
         ) {
-            // ── Wrap white top bar in Box that fills behind status bar ──────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White) // white fills behind status bar
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                ) {
-                    Text(
-                        text = stringResource(R.string.nav_promotions),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        fontFamily = Questv1FontFamily
-                    )
-                }
+            Surface(color = Color.White) {
+                ScreenHeaderTitle(
+                    text = stringResource(R.string.nav_promotions)
+                )
             }
 
-            HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-
-            // ── Body: list or empty state ─────────────────────
-            if (promotions.isEmpty()) {
+            if (isLoading && promotions.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color.Black)
+                }
+            } else if (promotions.isEmpty()) {
                 // Empty state
                 Box(
                     modifier = Modifier
@@ -198,6 +200,7 @@ fun PromotionsScreen(navController: NavController) {
                             contentScale = ContentScale.Fit
                         )
                         Spacer(Modifier.height(24.dp))
+                        @Suppress("DEPRECATION")
                         Text(
                             text = stringResource(R.string.promotions_empty_title),
                             fontSize = 20.sp,
@@ -206,6 +209,7 @@ fun PromotionsScreen(navController: NavController) {
                             fontFamily = Questv1FontFamily
                         )
                         Spacer(Modifier.height(8.dp))
+                        @Suppress("DEPRECATION")
                         Text(
                             text = stringResource(R.string.promotions_empty_desc),
                             fontSize = 14.sp,
@@ -238,10 +242,14 @@ fun PromotionsScreen(navController: NavController) {
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showBackground = true, showSystemUi = true, locale = "ar")
 @Composable
 fun PromotionsScreenPreview() {
-    MafiMushkilTheme {
-        PromotionsScreen(rememberNavController())
+    CompositionLocalProvider(
+        LocalLayoutDirection provides LayoutDirection.Rtl
+    ) {
+        MafiMushkilTheme {
+            PromotionsScreen(rememberNavController())
+        }
     }
 }

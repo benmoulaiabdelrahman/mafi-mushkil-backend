@@ -2,9 +2,8 @@
     <string name="app_name">مافي مشكل</string>
     <string name="mafi_mushkil">Mafi\nMushkil</string>
     <string name="app_logo_desc">App Logo</string>
-    <string name="pixel_io">Pixel IO</string>
-    <string name="technologies">Technologies</string>
-    <string name="pixel_io_desc">Pixel IO Technologies</string>
+    <string name="brand_name">فارداش</string>
+    <string name="brand_desc">فارداش</string>
 
     <!-- Welcome Screen -->
     <string name="welcome_title">Best Hands\nfor Help</string>
@@ -27,6 +26,11 @@
     <string name="security_verification_title">Security Verification</string>
     <string name="security_verification_subtitle">This is your first login from this device. To ensure your account security, please verify your identity.</string>
     <string name="start_to_verify">Start to Verify</string>
+
+    <!-- No Internet Sheet -->
+    <string name="no_internet_title">No Internet Connection</string>
+    <string name="no_internet_subtitle">Please check your connection and try again to continue.</string>
+    <string name="try_again">Try Again</string>
 
     <!-- Phone Verification -->
     <string name="phone_verification_title">Enter your phone number\nfor verification</string>
@@ -55,6 +59,7 @@
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
+    <string name="nav_services">My services</string>
     <string name="nav_orders">Orders</string>
     <string name="nav_promotions">Promos</string>
     <string name="nav_notifications">Notifs</string>
@@ -79,12 +84,28 @@
     <string name="cat_car_repair">Mechanic</string>
     <string name="cat_delivery">Delivery</string>
     <string name="cat_errands">Errands</string>
+    <string name="cat_pest_control">Pest Control</string>
+    <string name="cat_locksmith">Locksmith</string>
+    <string name="cat_appliance_repair">Appliance Repair</string>
+    <string name="cat_flooring_tiling">Flooring / Tiling</string>
+    <string name="cat_interior_design">Interior Design</string>
+    <string name="cat_welding_ironwork">Welding / Ironwork</string>
+    <string name="cat_satellite_tv_installation">Satellite / TV Installation</string>
+    <string name="cat_barber_haircut_at_home">Barber / Haircut at Home</string>
+    <string name="cat_beauty_makeup">Beauty &amp; Makeup</string>
+    <string name="cat_personal_trainer">Personal Trainer</string>
+    <string name="cat_photographer_videographer">Photographer / Videographer</string>
+    <string name="cat_tutoring_private_teacher">Tutoring / Private Teacher</string>
+    <string name="cat_it_tech_support">IT &amp; Tech Support</string>
+    <string name="cat_veterinarian">Veterinarian</string>
 
     <!-- Menu Drawer -->
     <string name="menu_profile">My profile</string>
     <string name="menu_contact">Contact us</string>
     <string name="menu_become_worker">Become worker</string>
     <string name="menu_register_company">Register company</string>
+    <string name="menu_revoke_worker">Revoke worker</string>
+    <string name="menu_revoke_company">Revoke company</string>
     <string name="menu_share">Share</string>
     <string name="menu_rate">Rate</string>
     <string name="menu_logout">Log out</string>
@@ -94,6 +115,31 @@
     <string name="menu_logout_confirm">Are you sure you want to log out?</string>
     <string name="menu_logout_yes">Yes, Log me out</string>
     <string name="menu_cancel">Cancel</string>
+    <string name="services_title">My services</string>
+    <string name="services_tab_services">Services</string>
+    <string name="services_tab_history">History</string>
+    <string name="services_tab_balance">Balance</string>
+    <string name="services_empty_active">No active service orders yet.</string>
+    <string name="services_empty_active_title">No active services</string>
+    <string name="services_empty_active_desc">Start accepting bookings to see them listed here.</string>
+    <string name="services_empty_history">No completed service orders yet.</string>
+    <string name="services_empty_history_title">No history yet</string>
+    <string name="services_empty_history_desc">Completed orders will show up once you fulfill them.</string>
+    <string name="services_no_description">No description available</string>
+    <string name="services_balance_title">Total earnings</string>
+    <string name="services_balance_subtitle">%1$d completed orders</string>
+    <string name="services_withdraw_button">Withdraw</string>
+    <string name="services_withdraw_title">Withdrawals</string>
+    <string name="services_withdraw_chargily">Withdraw via Chargily</string>
+    <string name="services_withdraw_later">Withdraw later</string>
+    <string name="services_locate_on_map">Locate on Map</string>
+    <string name="revoke_goodbye_title">Goodbye for now</string>
+    <string name="revoke_worker_subtitle">This will remove your worker registration and return your account to a regular user.</string>
+    <string name="revoke_company_subtitle">This will remove your company registration and return your account to a regular user.</string>
+    <string name="revoke_goodbye_note_title">You can come back anytime</string>
+    <string name="revoke_goodbye_note">If you want to register again later, you can return to the drawer and start the registration flow again.</string>
+    <string name="revoke_button">Revoke</string>
+    <string name="revoke_cancel">Not now</string>
     <string name="menu_my_orders">My Orders</string>
     <string name="menu_notifications">Notifications</string>
     <string name="menu_help">Help</string>
@@ -127,6 +173,10 @@
     <string name="order_detail_help_title">Do you need any help?</string>
     <string name="order_detail_help_desc">بعد التأكيد، سنقوم بتعيين عمال لطلبك.</string>
     <string name="order_detail_contact">اتصال</string>
+    <string name="order_detail_call_client_title">Call the client</string>
+    <string name="order_detail_call_client_desc">You can call the client directly from your phone.</string>
+    <string name="order_detail_call_client_unavailable">The client phone number is not available right now.</string>
+    <string name="order_detail_call_client_button">Call now</string>
     <string name="order_detail_workers">العمال والمساعدون</string>
     <string name="order_detail_payments">الدفع</string>
     <string name="order_detail_booked_services">الخدمات المحجوزة</string>

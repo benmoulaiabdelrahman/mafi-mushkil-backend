@@ -47,6 +47,7 @@ import com.vardash.mafimushkil.auth.ProfileState
 import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.auth.UserProfile
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
+import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,6 +71,7 @@ fun EditPhotoScreen(
     }
     
     var showSuccessSheet by remember { mutableStateOf(forceShowSuccess) }
+    var showNoInternetSheet by remember { mutableStateOf(false) }
     
     // Transformation states
     var userScale by rememberSaveable { mutableFloatStateOf(1f) }
@@ -184,12 +186,33 @@ fun EditPhotoScreen(
         }
     }
 
+    fun performUpload() {
+        val uriToUpload = selectedImageUri ?: Uri.parse(userProfile.profilePhoto)
+        if (uriToUpload != Uri.EMPTY) {
+            profileViewModel?.uploadProfilePhoto(
+                uriToUpload, 
+                context, 
+                userScale, 
+                offsetX / density.density, 
+                offsetY / density.density
+            )
+        }
+    }
+
     LaunchedEffect(profileState) {
         when (profileState) {
             is ProfileState.Success -> {
                 showSuccessSheet = true
-                // Do not reset selectedImageUriString yet, let the user see it until they dismiss
                 profileViewModel?.resetState()
+            }
+            is ProfileState.Error -> {
+                val errorMsg = (profileState as ProfileState.Error).message.lowercase()
+                if (errorMsg.contains("network error") || 
+                    errorMsg.contains("timeout") || 
+                    errorMsg.contains("unreachable") ||
+                    errorMsg.contains("connect")) {
+                    showNoInternetSheet = true
+                }
             }
             else -> {}
         }
@@ -225,22 +248,12 @@ fun EditPhotoScreen(
                         text = stringResource(R.string.edit_photo_title),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A)
+                        color = Color(0xFF1A1A1A),
+                        fontFamily = Questv1FontFamily
                     )
                 }
                 Button(
-                    onClick = {
-                        val uriToUpload = selectedImageUri ?: Uri.parse(userProfile.profilePhoto)
-                        if (uriToUpload != Uri.EMPTY) {
-                            profileViewModel?.uploadProfilePhoto(
-                                uriToUpload, 
-                                context, 
-                                userScale, 
-                                offsetX / density.density, 
-                                offsetY / density.density
-                            )
-                        }
-                    },
+                    onClick = { performUpload() },
                     enabled = (selectedImageUri != null || (userProfile.profilePhoto.isNotEmpty() && (userScale != userProfile.photoScale || (offsetX / density.density) != userProfile.photoOffsetX || (offsetY / density.density) != userProfile.photoOffsetY))) 
                         && profileState !is ProfileState.Loading,
                     shape = RoundedCornerShape(10.dp),
@@ -253,9 +266,9 @@ fun EditPhotoScreen(
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     if (profileState is ProfileState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color(0xFFCCFD04), strokeWidth = 2.dp)
                     } else {
-                        Text(stringResource(R.string.save), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.save), fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = Questv1FontFamily)
                     }
                 }
             }
@@ -343,7 +356,8 @@ fun EditPhotoScreen(
                 fontSize = 13.sp,
                 color = Color(0xFF888888),
                 textAlign = TextAlign.Center,
-                lineHeight = 18.sp
+                lineHeight = 18.sp,
+                fontFamily = Questv1FontFamily
             )
 
             Spacer(Modifier.height(32.dp))
@@ -372,7 +386,8 @@ fun EditPhotoScreen(
                         text = stringResource(R.string.edit_photo_gallery),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF282828)
+                        color = Color(0xFF282828),
+                        fontFamily = Questv1FontFamily
                     )
                 }
             }
@@ -403,7 +418,8 @@ fun EditPhotoScreen(
                         text = stringResource(R.string.edit_photo_camera),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF282828)
+                        color = Color(0xFF282828),
+                        fontFamily = Questv1FontFamily
                     )
                 }
             }
@@ -456,7 +472,8 @@ fun EditPhotoScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontFamily = Questv1FontFamily
                 )
 
                 Spacer(Modifier.height(28.dp))
@@ -477,14 +494,23 @@ fun EditPhotoScreen(
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
+                    @Suppress("DEPRECATION")
                     Text(
                         text = stringResource(R.string.ok),
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Questv1FontFamily
                     )
                 }
             }
         }
+    }
+    
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = { performUpload() }
+        )
     }
 }
 

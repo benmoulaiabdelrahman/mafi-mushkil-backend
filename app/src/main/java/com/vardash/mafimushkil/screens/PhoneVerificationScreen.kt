@@ -60,6 +60,8 @@ fun PhoneVerificationScreen(
     var phoneNumber by remember { mutableStateOf("") }
     val countryFlag = "🇩🇿"
     val countryCode = "+213"
+    
+    var showNoInternetSheet by remember { mutableStateOf(false) }
 
     // React to auth state changes
     LaunchedEffect(authState) {
@@ -70,6 +72,14 @@ fun PhoneVerificationScreen(
                     navController.navigate(Routes.updateOtp(fullPhone))
                 } else {
                     navController.navigate(Routes.otpVerification(fullPhone))
+                }
+            }
+            is AuthState.Error -> {
+                val errorMsg = (authState as AuthState.Error).message.lowercase()
+                if (errorMsg.contains("network error") || 
+                    errorMsg.contains("timeout") || 
+                    errorMsg.contains("unreachable")) {
+                    showNoInternetSheet = true
                 }
             }
             else -> {}
@@ -270,21 +280,38 @@ fun PhoneVerificationScreen(
                 }
             }
 
-            // Show error if any
+            // Show error if any (but NOT if it's a network error being shown in the sheet)
             if (authState is AuthState.Error) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = (authState as AuthState.Error).message,
-                    color = Color.Red,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                    fontFamily = Questv1FontFamily
-                )
+                val errorMsg = (authState as AuthState.Error).message
+                val isNetworkError = errorMsg.lowercase().contains("network error") || 
+                                     errorMsg.lowercase().contains("timeout") || 
+                                     errorMsg.lowercase().contains("unreachable")
+                
+                if (!isNetworkError) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = errorMsg,
+                        color = Color.Red,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontFamily = Questv1FontFamily
+                    )
+                }
             }
             
             Spacer(Modifier.height(48.dp))
         }
+    }
+    
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                val fullPhone = "$countryCode$phoneNumber"
+                activity?.let { authViewModel.sendOtp(fullPhone, it) }
+            }
+        )
     }
 }
 

@@ -36,6 +36,7 @@ import com.vardash.mafimushkil.auth.AuthViewModel
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,11 +63,21 @@ fun OtpVerificationScreen(
     var countdown by remember { mutableIntStateOf(59) }
     var canResend by remember { mutableStateOf(false) }
     var showSuccessSheet by remember { mutableStateOf(false) }
+    
+    var showNoInternetSheet by remember { mutableStateOf(false) }
 
     // React to auth state
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Success -> showSuccessSheet = true
+            is AuthState.Error -> {
+                val errorMsg = (authState as AuthState.Error).message.lowercase()
+                if (errorMsg.contains("network error") || 
+                    errorMsg.contains("timeout") || 
+                    errorMsg.contains("unreachable")) {
+                    showNoInternetSheet = true
+                }
+            }
             else -> {}
         }
     }
@@ -227,15 +238,22 @@ fun OtpVerificationScreen(
 
             // Error display
             if (authState is AuthState.Error) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = (authState as AuthState.Error).message,
-                    color = Color.Red,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                    fontFamily = Questv1FontFamily
-                )
+                val errorMsg = (authState as AuthState.Error).message
+                val isNetworkError = errorMsg.lowercase().contains("network error") || 
+                                     errorMsg.lowercase().contains("timeout") || 
+                                     errorMsg.lowercase().contains("unreachable")
+                
+                if (!isNetworkError) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = errorMsg,
+                        color = Color.Red,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontFamily = Questv1FontFamily
+                    )
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -257,7 +275,7 @@ fun OtpVerificationScreen(
                 }
             } else {
                 Text(
-                    text = stringResource(R.string.resend_timer, countdown),
+                    text = String.format(Locale.ENGLISH, stringResource(R.string.resend_timer), countdown),
                     fontSize = 14.sp,
                     color = Color(0xFFAAAAAA),
                     textAlign = TextAlign.Center,
@@ -283,6 +301,15 @@ fun OtpVerificationScreen(
                         popUpTo(Routes.Splash) { inclusive = true }
                     }
                 }
+            }
+        )
+    }
+    
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                activity?.let { authViewModel.verifyOtp(otpCode, it) }
             }
         )
     }

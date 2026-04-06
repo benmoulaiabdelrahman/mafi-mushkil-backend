@@ -29,9 +29,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -41,13 +43,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vardash.mafimushkil.Routes
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.auth.AuthViewModel
+import com.vardash.mafimushkil.auth.ProfileViewModel
+import com.vardash.mafimushkil.auth.SessionManager
+import com.vardash.mafimushkil.ui.theme.Accent
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
+import androidx.core.view.WindowCompat
 
 fun Context.findActivity(): ComponentActivity? = when (this) {
     is ComponentActivity -> this
@@ -60,12 +68,47 @@ fun MenuDrawer(
     isVisible: Boolean,
     onClose: () -> Unit,
     navController: NavController,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val layoutDirection = LocalLayoutDirection.current
+    val sessionManager = remember { SessionManager(context) }
+    val userProfile by profileViewModel.userProfile.collectAsState()
     var showRateSheet by remember { mutableStateOf(false) }
     var showLogoutSheet by remember { mutableStateOf(false) }
+
+    // Use both cache and live state for visibility
+    val cachedWorkerState = sessionManager.getWorkerState()
+    val cachedCompanyState = sessionManager.getCompanyState()
+
+    val isWorkerRegistered = userProfile.workerState.lowercase().trim() != "not" || 
+                           cachedWorkerState.lowercase().trim() != "not"
+    val isCompanyRegistered = userProfile.companyState.lowercase().trim() != "not" || 
+                            cachedCompanyState.lowercase().trim() != "not"
+
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            profileViewModel.loadUserProfile(context)
+        }
+    }
+
+    if (!view.isInEditMode) {
+        SideEffect {
+            if (!isVisible) return@SideEffect
+            val window = (view.context as? ComponentActivity)?.window ?: return@SideEffect
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+            }
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = true
+                isAppearanceLightNavigationBars = true
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Scrim
@@ -104,11 +147,9 @@ fun MenuDrawer(
                 )
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    Spacer(modifier = Modifier.height(20.dp))
                     // Header
                     Row(
                         modifier = Modifier
@@ -137,7 +178,7 @@ fun MenuDrawer(
                     // Menu Items
                     Column(
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(0.9f)
                             .verticalScroll(rememberScrollState())
                     ) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -159,22 +200,47 @@ fun MenuDrawer(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Group 2
-                        Column(modifier = Modifier.background(Color.White)) {
-                            MenuListItem(
-                                icon = Icons.Outlined.Engineering, 
-                                label = stringResource(R.string.menu_become_worker),
-                                onClick = { onClose(); navController.navigate(Routes.BecomeWorker) }
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(start = 60.dp), color = Color(0xFFF1F4F9))
-                            MenuListItem(
-                                icon = Icons.Outlined.Domain, 
-                                label = stringResource(R.string.menu_register_company),
-                                onClick = { onClose(); navController.navigate(Routes.RegisterCompany) }
-                            )
+                        if (!isWorkerRegistered && !isCompanyRegistered) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(modifier = Modifier.background(Color.White)) {
+                                MenuListItem(
+                                    icon = Icons.Outlined.Engineering,
+                                    label = stringResource(R.string.menu_become_worker),
+                                    onClick = { onClose(); navController.navigate(Routes.BecomeWorker) }
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(start = 60.dp), color = Color(0xFFF1F4F9))
+                                MenuListItem(
+                                    icon = Icons.Outlined.Domain,
+                                    label = stringResource(R.string.menu_register_company),
+                                    onClick = { onClose(); navController.navigate(Routes.RegisterCompany) }
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(modifier = Modifier.background(Color.White)) {
+                                if (isWorkerRegistered) {
+                                    MenuListItem(
+                                        icon = Icons.Outlined.DeleteOutline,
+                                        label = stringResource(R.string.menu_revoke_worker),
+                                        onClick = { onClose(); navController.navigate(Routes.revokeRegistration("worker")) }
+                                    )
+                                }
+                                if (isWorkerRegistered && isCompanyRegistered) {
+                                    HorizontalDivider(modifier = Modifier.padding(start = 60.dp), color = Color(0xFFF1F4F9))
+                                }
+                                if (isCompanyRegistered) {
+                                    MenuListItem(
+                                        icon = Icons.Outlined.DeleteOutline,
+                                        label = stringResource(R.string.menu_revoke_company),
+                                        onClick = { onClose(); navController.navigate(Routes.revokeRegistration("company")) }
+                                    )
+                                }
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        if (!isWorkerRegistered && !isCompanyRegistered) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
 
                         // Group 3
                         Column(modifier = Modifier.background(Color.White)) {
@@ -213,7 +279,9 @@ fun MenuDrawer(
                         }
                     }
 
-                    // Footer with Pixel io Technologies branding
+                    Spacer(modifier = Modifier.weight(0.1f))
+
+                    // Footer with Vardash branding
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -221,36 +289,27 @@ fun MenuDrawer(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Pixel io Technologies (matching ContactUs style)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(R.drawable.pixel_io_technologies),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Column {
-                                @Suppress("DEPRECATION")
-                                Text(
-                                    text = stringResource(R.string.pixel_io),
-                                    fontSize = 9.9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = Questv1FontFamily,
-                                    color = Color(0xFF282828),
-                                    lineHeight = 11.sp
-                                )
-                                @Suppress("DEPRECATION")
-                                Text(
-                                    text = stringResource(R.string.technologies),
-                                    fontSize = 9.9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = Questv1FontFamily,
-                                    color = Color(0xFF282828),
-                                    lineHeight = 11.sp
-                                )
-                            }
-                        }
+
+
+                                                // Vardash (matching ContactUs style)
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Image(
+                                                        painter = painterResource(R.drawable.vardash),
+                                                        contentDescription = stringResource(R.string.brand_desc),
+                                                        modifier = Modifier.size(36.dp),
+                                                        contentScale = ContentScale.Fit,
+                                                        colorFilter = ColorFilter.tint(Color(0xFF8E8E8E))
+                                                    )
+                                                    @Suppress("DEPRECATION")
+                                                    Text(
+                                                        text = stringResource(R.string.brand_name),
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontFamily = Questv1FontFamily,
+                                                        color = Color(0xFF8E8E8E),
+                                                        lineHeight = 20.sp
+                                                    )
+                                                }
 
                         // Version Number
                         @Suppress("DEPRECATION")
@@ -261,6 +320,7 @@ fun MenuDrawer(
                             fontFamily = Questv1FontFamily
                         )
                     }
+
                 }
             }
         }

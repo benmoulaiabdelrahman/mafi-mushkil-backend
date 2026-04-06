@@ -1,5 +1,6 @@
 package com.vardash.mafimushkil.screens
 
+import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -48,8 +48,20 @@ import coil.compose.AsyncImage
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.auth.OrderState
 import com.vardash.mafimushkil.auth.OrderViewModel
-import com.vardash.mafimushkil.models.SelectedCategory
+import com.vardash.mafimushkil.ui.theme.Accent
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
+
+private fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return when {
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> true
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+        else -> false
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,12 +132,18 @@ fun ConfirmOrderSheet(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF282828),
-                    contentColor = Color.White
+                    contentColor = Color.White,
+                    disabledContainerColor = Color(0xFFAAAAAA),
+                    disabledContentColor = Color.White
                 ),
                 elevation = ButtonDefaults.buttonElevation(0.dp)
             ) {
                 if (orderState is OrderState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    CircularProgressIndicator(
+                        color = Accent,
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 3.dp
+                    )
                 } else {
                     @Suppress("DEPRECATION")
                     Text(
@@ -154,6 +172,8 @@ fun PlaceOrderScreen(
 
     val selectedCategories = orderViewModel.pendingCategories
     val photos = orderViewModel.pendingPhotos
+    
+    var showNoInternetSheet by remember { mutableStateOf(false) }
 
     // ✅ Reset form only when starting from main menus
     LaunchedEffect(categoryId) {
@@ -222,6 +242,21 @@ fun PlaceOrderScreen(
             orderViewModel.resetState()
             navController.navigate(Routes.Orders) {
                 popUpTo(Routes.Home) { inclusive = false }
+            }
+        } else if (orderState is OrderState.Error) {
+            val errorMsg = (orderState as OrderState.Error).message.lowercase()
+            if (errorMsg.contains("network error") || 
+                errorMsg.contains("timeout") || 
+                errorMsg.contains("unreachable") ||
+                errorMsg.contains("failed to connect") ||
+                errorMsg.contains("host")) {
+                // If it's a network error, dismiss confirmation sheet and show no internet sheet
+                if (showConfirmSheet) {
+                    showConfirmSheet = false
+                    // Small delay to ensure smooth transition between sheets
+                    kotlinx.coroutines.delay(300)
+                }
+                showNoInternetSheet = true
             }
         }
     }
@@ -517,26 +552,40 @@ fun PlaceOrderScreen(
 
             @Suppress("DEPRECATION")
             Button(
-                onClick = { showConfirmSheet = true },
-                enabled = isFormFilled,
+                onClick = {
+                    if (isNetworkAvailable(context)) {
+                        showConfirmSheet = true
+                    } else {
+                        showNoInternetSheet = true
+                    }
+                },
+                enabled = isFormFilled && orderState !is OrderState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF282828),
-                    disabledContainerColor = Color(0xFFE0E0E0),
+                    disabledContainerColor = Color(0xFFAAAAAA),
                     contentColor = Color.White,
-                    disabledContentColor = Color(0xFF888888)
+                    disabledContentColor = Color.White
                 ),
                 elevation = ButtonDefaults.buttonElevation(0.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.confirm_order_sheet_button),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = Questv1FontFamily
-                )
+                if (orderState is OrderState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Accent,
+                        strokeWidth = 3.dp
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.confirm_order_sheet_button),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Questv1FontFamily
+                    )
+                }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -555,6 +604,21 @@ fun PlaceOrderScreen(
                 )
             },
             onDismiss = { showConfirmSheet = false }
+        )
+    }
+    
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                orderViewModel.placeOrder(
+                    context,
+                    selectedCategories,
+                    orderViewModel.pendingAddress,
+                    orderViewModel.pendingDetails,
+                    photos
+                )
+            }
         )
     }
 }

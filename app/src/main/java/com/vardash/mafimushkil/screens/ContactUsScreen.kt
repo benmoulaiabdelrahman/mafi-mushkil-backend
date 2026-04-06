@@ -230,39 +230,28 @@ fun ContactUsScreen(navController: NavController) {
                 HorizontalDivider(color = Color(0xFFEEEEEE), modifier = Modifier.padding(horizontal = 24.dp))
                 Spacer(Modifier.height(24.dp))
 
-                // Pixel io Technologies branding (matching SplashScreen)
+                // Vardash branding (matching SplashScreen)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.padding(bottom = 32.dp)
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.pixel_io_technologies),
-                        contentDescription = stringResource(R.string.pixel_io_desc),
-                        modifier = Modifier.size(18.dp),
+                        painter = painterResource(R.drawable.vardash),
+                        contentDescription = stringResource(R.string.brand_desc),
+                        modifier = Modifier.size(36.dp),
                         contentScale = ContentScale.Fit
                     )
-                    Spacer(Modifier.width(6.dp))
-                    Column {
-                        @Suppress("DEPRECATION")
-                        Text(
-                            text = stringResource(R.string.pixel_io),
-                            fontSize = 9.9.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = Questv1FontFamily,
-                            color = Color(0xFF282828),
-                            lineHeight = 11.sp
-                        )
-                        @Suppress("DEPRECATION")
-                        Text(
-                            text = stringResource(R.string.technologies),
-                            fontSize = 9.9.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = Questv1FontFamily,
-                            color = Color(0xFF282828),
-                            lineHeight = 11.sp
-                        )
-                    }
+                    Spacer(Modifier.width(4.dp))
+                    @Suppress("DEPRECATION")
+                    Text(
+                        text = stringResource(R.string.brand_name),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Questv1FontFamily,
+                        color = Color(0xFF282828),
+                        lineHeight = 20.sp
+                    )
                 }
             }
         }

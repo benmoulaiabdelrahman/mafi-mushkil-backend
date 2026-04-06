@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,11 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,6 +38,7 @@ import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.auth.OrderViewModel
 import com.vardash.mafimushkil.models.Category
+import com.vardash.mafimushkil.models.defaultServiceCategories
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
@@ -50,16 +54,37 @@ fun CategoriesScreen(
         orderViewModel.loadCategories()
     }
 
-    // Fallback categories if Firestore is empty
-    val displayCategories = if (categories.isEmpty()) {
-        listOf(
-            Category("1", "Cleaning", "cleaning"),
-            Category("2", "Electrician", "electrician"),
-            Category("3", "Plumber", "plumber"),
-            Category("4", "Carpenter", "carpenter")
-        )
-    } else categories
+    CategoriesScreenContent(
+        navController = navController,
+        isAdding = isAdding,
+        categories = categories,
+        onCategoryClick = { category ->
+            if (isAdding) {
+                // ✅ Mode: ADDING - use individual stable strings to return result
+                navController.previousBackStackEntry?.savedStateHandle?.let { handle ->
+                    handle["added_id"] = category.id
+                    handle["added_name"] = category.name
+                    handle["added_icon"] = category.iconName
+                }
+                navController.popBackStack()
+            } else {
+                // ✅ Mode: STARTING FRESH - navigate with encoding
+                val encId = Uri.encode(category.id)
+                val encName = Uri.encode(category.name)
+                val encIcon = Uri.encode(category.iconName)
+                navController.navigate("place_order?categoryId=$encId&categoryName=$encName&iconName=$encIcon")
+            }
+        }
+    )
+}
 
+@Composable
+fun CategoriesScreenContent(
+    navController: NavController,
+    isAdding: Boolean,
+    categories: List<Category>,
+    onCategoryClick: (Category) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -104,7 +129,7 @@ fun CategoriesScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(displayCategories) { category ->
+            items(categories) { category ->
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -113,23 +138,7 @@ fun CategoriesScreen(
                     modifier = Modifier
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(14.dp))
-                        .clickable {
-                            if (isAdding) {
-                                // ✅ Mode: ADDING - use individual stable strings to return result
-                                navController.previousBackStackEntry?.savedStateHandle?.let { handle ->
-                                    handle["added_id"] = category.id
-                                    handle["added_name"] = category.name
-                                    handle["added_icon"] = category.iconName
-                                }
-                                navController.popBackStack()
-                            } else {
-                                // ✅ Mode: STARTING FRESH - navigate with encoding
-                                val encId = Uri.encode(category.id)
-                                val encName = Uri.encode(category.name)
-                                val encIcon = Uri.encode(category.iconName)
-                                navController.navigate("place_order?categoryId=$encId&categoryName=$encName&iconName=$encIcon")
-                            }
-                        }
+                        .clickable { onCategoryClick(category) }
                 ) {
                     Column(
                         modifier = Modifier
@@ -163,10 +172,19 @@ fun CategoriesScreen(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showBackground = true, showSystemUi = true, locale = "ar")
 @Composable
 fun CategoriesScreenPreview() {
-    MafiMushkilTheme {
-        CategoriesScreen(navController = rememberNavController())
+    CompositionLocalProvider(
+        LocalLayoutDirection provides LayoutDirection.Rtl
+    ) {
+        MafiMushkilTheme {
+            CategoriesScreenContent(
+                navController = rememberNavController(),
+                isAdding = false,
+                categories = defaultServiceCategories,
+                onCategoryClick = {}
+            )
+        }
     }
 }

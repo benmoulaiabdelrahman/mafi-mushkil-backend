@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,6 +29,7 @@ import com.vardash.mafimushkil.auth.ProfileState
 import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.auth.UserProfile
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
+import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,11 +37,13 @@ fun EditGenderScreen(
     navController: NavController,
     profileViewModel: ProfileViewModel? = if (androidx.compose.ui.platform.LocalInspectionMode.current) null else viewModel()
 ) {
+    val context = LocalContext.current
     val profileState by (profileViewModel?.profileState?.collectAsState() ?: remember { mutableStateOf(ProfileState.Idle) })
     val userProfile by (profileViewModel?.userProfile?.collectAsState() ?: remember { mutableStateOf(UserProfile()) })
     
     var selectedGender by remember(userProfile.gender) { mutableStateOf(userProfile.gender) }
     var showSuccessSheet by remember { mutableStateOf(false) }
+    var showNoInternetSheet by remember { mutableStateOf(false) }
 
     val isSaveEnabled = selectedGender.isNotBlank() && 
             selectedGender != userProfile.gender &&
@@ -50,6 +54,12 @@ fun EditGenderScreen(
             is ProfileState.Success -> {
                 showSuccessSheet = true
                 profileViewModel?.resetState()
+            }
+            is ProfileState.Error -> {
+                val errorMsg = (profileState as ProfileState.Error).message
+                if (errorMsg.contains("network error", ignoreCase = true)) {
+                    showNoInternetSheet = true
+                }
             }
             else -> {}
         }
@@ -86,11 +96,12 @@ fun EditGenderScreen(
                         text = stringResource(R.string.edit_gender_title),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A)
+                        color = Color(0xFF1A1A1A),
+                        fontFamily = Questv1FontFamily
                     )
                 }
                 Button(
-                    onClick = { profileViewModel?.updateGender(selectedGender) },
+                    onClick = { profileViewModel?.updateGender(selectedGender, context) },
                     enabled = isSaveEnabled,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -102,9 +113,18 @@ fun EditGenderScreen(
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     if (profileState is ProfileState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color(0xFFCCFD04),
+                            strokeWidth = 2.dp
+                        )
                     } else {
-                        Text(stringResource(R.string.save), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            text = stringResource(R.string.save),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = Questv1FontFamily
+                        )
                     }
                 }
             }
@@ -184,7 +204,8 @@ fun EditGenderScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontFamily = Questv1FontFamily
                 )
 
                 Spacer(Modifier.height(28.dp))
@@ -207,11 +228,23 @@ fun EditGenderScreen(
                     Text(
                         text = stringResource(R.string.ok),
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Questv1FontFamily
                     )
                 }
             }
         }
+    }
+
+    // ── No Internet Sheet ─────────────────────────────────
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                showNoInternetSheet = false
+                profileViewModel?.updateGender(selectedGender, context)
+            }
+        )
     }
 }
 
@@ -241,7 +274,8 @@ fun GenderOption(
         Text(
             text = label,
             fontSize = 16.sp,
-            color = Color(0xFF888888)
+            color = Color(0xFF888888),
+            fontFamily = Questv1FontFamily
         )
     }
 }

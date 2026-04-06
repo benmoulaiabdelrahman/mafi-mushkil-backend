@@ -32,12 +32,14 @@ import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.net.UnknownHostException
+import java.net.SocketTimeoutException
 
 @Composable
 fun SelectLocationScreen(
@@ -48,6 +50,9 @@ fun SelectLocationScreen(
     var searchResults by remember { mutableStateOf<List<String>>(emptyList()) }
     var isSearching by remember { mutableStateOf(false) }
     var searchError by remember { mutableStateOf<String?>(null) }
+    
+    var showNoInternetSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     val currentSavedStateHandle = navController.currentBackStackEntry?.savedStateHandle
     val selectedLocationFromMap by currentSavedStateHandle
@@ -66,44 +71,55 @@ fun SelectLocationScreen(
         }
     }
 
+    suspend fun performSearch(query: String) {
+        if (query.length <= 2) {
+            searchResults = emptyList()
+            return
+        }
+        isSearching = true
+        searchError = null
+        try {
+            val results = withContext(Dispatchers.IO) {
+                val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                // Using Nominatim API - more reliable for multiple languages including Arabic
+                val urlString = "https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=10&accept-language=ar"
+                
+                val url = URL(urlString)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.setRequestProperty("User-Agent", "MafiMushkilApp/1.0")
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = connection.inputStream.bufferedReader().readText()
+                    val jsonArray = JSONArray(response)
+                    List(jsonArray.length()) { i -> 
+                        jsonArray.getJSONObject(i).optString("display_name", "")
+                    }.filter { it.isNotEmpty() }
+                } else {
+                    null
+                }
+            }
+            if (results != null) {
+                searchResults = results
+            } else {
+                searchResults = emptyList()
+            }
+        } catch (e: Exception) {
+            Log.e("SelectLocation", "Search error", e)
+            if (e is UnknownHostException || e is SocketTimeoutException || e.message?.contains("timeout") == true) {
+                showNoInternetSheet = true
+            }
+            searchResults = emptyList()
+        } finally {
+            isSearching = false
+        }
+    }
+
     LaunchedEffect(addressQuery) {
         if (addressQuery.length > 2) {
             delay(700) 
-            isSearching = true
-            searchError = null
-            try {
-                val results = withContext(Dispatchers.IO) {
-                    val encodedQuery = URLEncoder.encode(addressQuery, "UTF-8")
-                    // Using Nominatim API - more reliable for multiple languages including Arabic
-                    val urlString = "https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=10&accept-language=ar"
-                    
-                    val url = URL(urlString)
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.setRequestProperty("User-Agent", "MafiMushkilApp/1.0")
-                    connection.connectTimeout = 8000
-                    connection.readTimeout = 8000
-                    
-                    if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                        val response = connection.inputStream.bufferedReader().readText()
-                        val jsonArray = JSONArray(response)
-                        List(jsonArray.length()) { i -> 
-                            jsonArray.getJSONObject(i).optString("display_name", "")
-                        }.filter { it.isNotEmpty() }
-                    } else {
-                        null
-                    }
-                }
-                if (results != null) {
-                    searchResults = results
-                } else {
-                    searchResults = emptyList()
-                }
-            } catch (e: Exception) {
-                Log.e("SelectLocation", "Search error", e)
-                searchResults = emptyList()
-            } finally {
-                isSearching = false
-            }
+            performSearch(addressQuery)
         } else {
             searchResults = emptyList()
             searchError = null
@@ -255,5 +271,22 @@ fun SelectLocationScreen(
                 }
             }
         }
+    }
+    
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                scope.launch { performSearch(addressQuery) }
+            }
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, locale = "ar")
+@Composable
+fun SelectLocationScreenPreview() {
+    MafiMushkilTheme {
+        SelectLocationScreen(navController = rememberNavController())
     }
 }

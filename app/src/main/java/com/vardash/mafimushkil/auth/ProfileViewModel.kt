@@ -1,6 +1,8 @@
 package com.vardash.mafimushkil.auth
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,7 +27,9 @@ data class UserProfile(
     val photoOffsetY: Float = 0f,
     val workerState: String = "not",
     val workerExperience: String = "",
-    val workerServices: String = ""
+    val workerServices: String = "",
+    val companyState: String = "not",
+    val companyName: String = ""
 )
 
 sealed class ProfileState {
@@ -37,8 +41,8 @@ sealed class ProfileState {
 
 class ProfileViewModel : ViewModel() {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance()
+    private val auth by lazy { FirebaseAuth.getInstance() }
+    private val firestore by lazy { FirebaseFirestore.getInstance() }
 
     private val _userProfile = MutableStateFlow(UserProfile())
     val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
@@ -46,13 +50,40 @@ class ProfileViewModel : ViewModel() {
     private val _profileState = MutableStateFlow<ProfileState>(ProfileState.Idle)
     val profileState: StateFlow<ProfileState> = _profileState.asStateFlow()
 
-    fun loadUserProfile() {
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return when {
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+            else -> false
+        }
+    }
+
+    fun loadUserProfile(context: Context? = null) {
         val uid = auth.currentUser?.uid ?: return
+        
         viewModelScope.launch {
             try {
-                _profileState.value = ProfileState.Loading
                 val snapshot = firestore.collection("users").document(uid).get().await()
                 if (snapshot.exists()) {
+                    val companySnapshot = firestore.collection("companies")
+                        .whereEqualTo("userId", uid)
+                        .limit(1)
+                        .get()
+                        .await()
+                    val companyDoc = companySnapshot.documents.firstOrNull()
+                    
+                    val workerState = snapshot.getString("workerState") ?: "not"
+                    val companyState = companyDoc?.getString("status") ?: "not"
+                    
+                    // Sync to local session if context is provided
+                    context?.let {
+                        SessionManager(it).saveUserStates(workerState, companyState)
+                    }
+
                     _userProfile.value = UserProfile(
                         uid = snapshot.getString("uid") ?: "",
                         phone = snapshot.getString("phone") ?: "",
@@ -64,9 +95,11 @@ class ProfileViewModel : ViewModel() {
                         photoScale = snapshot.getDouble("photoScale")?.toFloat() ?: 1f,
                         photoOffsetX = snapshot.getDouble("photoOffsetX")?.toFloat() ?: 0f,
                         photoOffsetY = snapshot.getDouble("photoOffsetY")?.toFloat() ?: 0f,
-                        workerState = snapshot.getString("workerState") ?: "not",
+                        workerState = workerState,
                         workerExperience = snapshot.getString("workerExperience") ?: "",
-                        workerServices = snapshot.getString("workerServices") ?: ""
+                        workerServices = snapshot.getString("workerServices") ?: "",
+                        companyState = companyState,
+                        companyName = companyDoc?.getString("companyName") ?: ""
                     )
                 }
                 _profileState.value = ProfileState.Idle
@@ -76,11 +109,25 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun updateName(name: String) {
+    fun checkEmailVerification() {
+        val user = auth.currentUser ?: return
+        user.reload().addOnCompleteListener {
+            _userProfile.value = _userProfile.value.copy(isEmailVerified = user.isEmailVerified)
+        }
+    }
+
+    fun updateName(name: String, context: Context) {
         val uid = auth.currentUser?.uid ?: return
+        
+        _profileState.value = ProfileState.Loading
+
+        if (!isNetworkAvailable(context)) {
+            _profileState.value = ProfileState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
         viewModelScope.launch {
             try {
-                _profileState.value = ProfileState.Loading
                 firestore.collection("users").document(uid)
                     .update("name", name).await()
                 _userProfile.value = _userProfile.value.copy(name = name)
@@ -91,12 +138,19 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun updateEmail(email: String) {
+    fun updateEmail(email: String, context: Context) {
         val uid = auth.currentUser?.uid ?: return
         val user = auth.currentUser ?: return
+        
+        _profileState.value = ProfileState.Loading
+
+        if (!isNetworkAvailable(context)) {
+            _profileState.value = ProfileState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
         viewModelScope.launch {
             try {
-                _profileState.value = ProfileState.Loading
                 firestore.collection("users").document(uid)
                     .update("email", email).await()
                 user.sendEmailVerification().await()
@@ -111,23 +165,18 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun checkEmailVerification() {
-        viewModelScope.launch {
-            try {
-                auth.currentUser?.reload()?.await()
-                val isVerified = auth.currentUser?.isEmailVerified ?: false
-                _userProfile.value = _userProfile.value.copy(isEmailVerified = isVerified)
-            } catch (e: Exception) {
-                // Ignore
-            }
-        }
-    }
-
-    fun updateGender(gender: String) {
+    fun updateGender(gender: String, context: Context) {
         val uid = auth.currentUser?.uid ?: return
+        
+        _profileState.value = ProfileState.Loading
+
+        if (!isNetworkAvailable(context)) {
+            _profileState.value = ProfileState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
         viewModelScope.launch {
             try {
-                _profileState.value = ProfileState.Loading
                 firestore.collection("users").document(uid)
                     .update("gender", gender).await()
                 _userProfile.value = _userProfile.value.copy(gender = gender)
@@ -138,40 +187,124 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    // Upload profile photo to Cloudinary
-    fun uploadProfilePhoto(imageUri: Uri, context: Context, scale: Float = 1f, offsetX: Float = 0f, offsetY: Float = 0f) {
+    fun uploadProfilePhoto(uri: Uri, context: Context, scale: Float, offsetX: Float, offsetY: Float) {
         val uid = auth.currentUser?.uid ?: return
+        
+        _profileState.value = ProfileState.Loading
+
+        if (!isNetworkAvailable(context)) {
+            _profileState.value = ProfileState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
         viewModelScope.launch {
             try {
-                _profileState.value = ProfileState.Loading
-                
-                // Upload to Cloudinary (only if it's a new URI, otherwise just update metadata)
-                val downloadUrl = if (imageUri.toString().startsWith("http")) {
-                    imageUri.toString()
-                } else {
-                    CloudinaryManager.uploadImage(context, imageUri, uid)
-                }
-                
-                // Save URL and adjustment metadata to Firestore
+                val photoUrl = CloudinaryManager.uploadImage(context, uri, uid)
+                updateProfilePhoto(photoUrl, scale, offsetX, offsetY, context)
+            } catch (e: Exception) {
+                _profileState.value = ProfileState.Error(e.message ?: "Failed to upload photo")
+            }
+        }
+    }
+
+    fun updateProfilePhoto(photoUrl: String, scale: Float, offsetX: Float, offsetY: Float, context: Context) {
+        val uid = auth.currentUser?.uid ?: return
+        
+        _profileState.value = ProfileState.Loading
+
+        if (!isNetworkAvailable(context)) {
+            _profileState.value = ProfileState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
                 firestore.collection("users").document(uid)
                     .update(
                         mapOf(
-                            "profilePhoto" to downloadUrl,
+                            "profilePhoto" to photoUrl,
                             "photoScale" to scale,
                             "photoOffsetX" to offsetX,
                             "photoOffsetY" to offsetY
                         )
                     ).await()
-
                 _userProfile.value = _userProfile.value.copy(
-                    profilePhoto = downloadUrl,
+                    profilePhoto = photoUrl,
                     photoScale = scale,
                     photoOffsetX = offsetX,
                     photoOffsetY = offsetY
                 )
                 _profileState.value = ProfileState.Success
             } catch (e: Exception) {
-                _profileState.value = ProfileState.Error(e.message ?: "Failed to upload photo")
+                _profileState.value = ProfileState.Error(e.message ?: "Failed to update profile photo")
+            }
+        }
+    }
+
+    fun revokeWorkerRegistration(context: Context) {
+        val uid = auth.currentUser?.uid ?: return
+
+        _profileState.value = ProfileState.Loading
+
+        if (!isNetworkAvailable(context)) {
+            _profileState.value = ProfileState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                firestore.collection("users").document(uid)
+                    .update(
+                        mapOf(
+                            "workerState" to "not",
+                            "workerExperience" to "",
+                            "workerServices" to ""
+                        )
+                    ).await()
+                
+                SessionManager(context).saveUserStates("not", _userProfile.value.companyState)
+
+                _userProfile.value = _userProfile.value.copy(
+                    workerState = "not",
+                    workerExperience = "",
+                    workerServices = ""
+                )
+                _profileState.value = ProfileState.Success
+            } catch (e: Exception) {
+                _profileState.value = ProfileState.Error(e.message ?: "Failed to revoke worker registration")
+            }
+        }
+    }
+
+    fun revokeCompanyRegistration(context: Context) {
+        val uid = auth.currentUser?.uid ?: return
+
+        _profileState.value = ProfileState.Loading
+
+        if (!isNetworkAvailable(context)) {
+            _profileState.value = ProfileState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val companySnapshot = firestore.collection("companies")
+                    .whereEqualTo("userId", uid)
+                    .limit(1)
+                    .get()
+                    .await()
+
+                companySnapshot.documents.firstOrNull()?.reference?.delete()?.await()
+
+                SessionManager(context).saveUserStates(_userProfile.value.workerState, "not")
+
+                _userProfile.value = _userProfile.value.copy(
+                    companyState = "not",
+                    companyName = ""
+                )
+                _profileState.value = ProfileState.Success
+            } catch (e: Exception) {
+                _profileState.value = ProfileState.Error(e.message ?: "Failed to revoke company registration")
             }
         }
     }

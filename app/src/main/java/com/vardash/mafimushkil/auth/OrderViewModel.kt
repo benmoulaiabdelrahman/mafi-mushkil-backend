@@ -1,6 +1,8 @@
 package com.vardash.mafimushkil.auth
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -16,6 +18,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.vardash.mafimushkil.models.Category
 import com.vardash.mafimushkil.models.Order
 import com.vardash.mafimushkil.models.SelectedCategory
+import com.vardash.mafimushkil.models.defaultServiceCategories
 import com.vardash.mafimushkil.models.toEpochMillis
 import com.vardash.mafimushkil.models.toOrder
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.SetOptions
 
 sealed class OrderState {
     object Idle : OrderState()
@@ -31,59 +35,7 @@ sealed class OrderState {
     data class Error(val message: String) : OrderState()
 }
 
-/*
-Firestore schema used by the app and backend:
-
-orders/{orderId}
-{
-  orderId: string,
-  userId: string,
-  status: "pending" | "accepted" | "confirmed" | "assigned" | "in_progress" | "completed" | "cancelled",
-  address: string,
-  details: string,
-  createdAt: Timestamp,
-  updatedAt: Timestamp,
-  confirmedByCustomer: boolean,
-  fcmToken: string,
-  cancellationReason: string,
-  categories: [
-    { id: string, name: string, iconName: string }
-  ],
-  photoUrls: [string],
-  bookedServices: [
-    { id: string, name: string, price: number, quantity: number }
-  ],
-  workers: [
-    { id: string, name: string, role: string, photoUrl: string }
-  ],
-  payments: [
-    {
-      id: string,
-      title: string,
-      amount: number,
-      dueDate: number,
-      status: "pending" | "paid",
-      method: string,
-      paidDate: number,
-      checkoutUrl: string,
-      reference: string
-    }
-  ],
-  tax: number,
-  discount: number,
-  totalPrice: number
-}
-
-workers/{workerId}
-{
-  name: string,
-  photoUrl: string,
-  role: string,
-  phoneNumber: string,
-  isActive: boolean
-}
-*/
-class OrderViewModel : ViewModel() {
+open class OrderViewModel : ViewModel() {
 
     private val auth by lazy { FirebaseAuth.getInstance() }
     private val firestore by lazy { FirebaseFirestore.getInstance() }
@@ -93,8 +45,11 @@ class OrderViewModel : ViewModel() {
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
     val categories: StateFlow<List<Category>> = _categories.asStateFlow()
 
+    private val _categoriesReady = MutableStateFlow(false)
+    val categoriesReady: StateFlow<Boolean> = _categoriesReady.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    open val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -105,11 +60,26 @@ class OrderViewModel : ViewModel() {
     private val _completedOrders = MutableStateFlow<List<Order>>(emptyList())
     val completedOrders: StateFlow<List<Order>> = _completedOrders.asStateFlow()
 
+    private val _servicePendingOrders = MutableStateFlow<List<Order>>(emptyList())
+    val servicePendingOrders: StateFlow<List<Order>> = _servicePendingOrders.asStateFlow()
+
+    private val _serviceCompletedOrders = MutableStateFlow<List<Order>>(emptyList())
+    val serviceCompletedOrders: StateFlow<List<Order>> = _serviceCompletedOrders.asStateFlow()
+
+    private val _serviceAllOrders = MutableStateFlow<List<Order>>(emptyList())
+    val serviceAllOrders: StateFlow<List<Order>> = _serviceAllOrders.asStateFlow()
+
     private val _allOrders = MutableStateFlow<List<Order>>(emptyList())
     val allOrders: StateFlow<List<Order>> = _allOrders.asStateFlow()
 
+    private val _isUserOrdersLoaded = MutableStateFlow(false)
+    val isUserOrdersLoaded: StateFlow<Boolean> = _isUserOrdersLoaded.asStateFlow()
+
+    private val _isServiceOrdersLoaded = MutableStateFlow(false)
+    val isServiceOrdersLoaded: StateFlow<Boolean> = _isServiceOrdersLoaded.asStateFlow()
+
     private val _selectedOrder = MutableStateFlow<Order?>(null)
-    val selectedOrder: StateFlow<Order?> = _selectedOrder.asStateFlow()
+    open val selectedOrder: StateFlow<Order?> = _selectedOrder.asStateFlow()
 
     private val _orderState = MutableStateFlow<OrderState>(OrderState.Idle)
     val orderState: StateFlow<OrderState> = _orderState.asStateFlow()
@@ -161,6 +131,7 @@ class OrderViewModel : ViewModel() {
 
     fun loadCategories() {
         viewModelScope.launch {
+            _categoriesReady.value = false
             _isLoading.value = true
             _error.value = null
             try {
@@ -169,17 +140,11 @@ class OrderViewModel : ViewModel() {
                     .get().await()
 
                 if (snapshot.isEmpty) {
-                    Log.d("OrderViewModel", "No categories found in Firestore. Attempting to seed...")
-                    seedCategoriesInternal()
-                    val newSnapshot = firestore.collection("categories")
-                        .whereEqualTo("isActive", true)
-                        .get().await()
-                    _categories.value = newSnapshot.documents.mapNotNull { doc ->
-                        doc.toObject(Category::class.java)?.copy(id = doc.id)
-                    }
+                    Log.d("OrderViewModel", "No categories found in Firestore.")
+                    _categories.value = emptyList()
                 } else {
                     _categories.value = snapshot.documents.mapNotNull { doc ->
-                        doc.toObject(Category::class.java)?.copy(id = doc.id)
+                        doc.toObject(Category::class.java)?.copy(id = doc.id)?.withFixedIcon()
                     }
                 }
             } catch (e: Exception) {
@@ -187,20 +152,31 @@ class OrderViewModel : ViewModel() {
                 _error.value = e.message
             } finally {
                 _isLoading.value = false
+                _categoriesReady.value = true
             }
         }
     }
 
-    fun loadUserOrders() {
+    fun loadUserOrders(context: Context? = null) {
         val uid = auth.currentUser?.uid ?: return
-        ordersListener?.remove()
+        
+        // Initial load from cache
+        context?.let {
+            val cached = SessionManager(it).getOrders()
+            if (cached.isNotEmpty()) {
+                updateOrdersState(cached)
+                _isUserOrdersLoaded.value = true
+            }
+        }
 
+        ordersListener?.remove()
         ordersListener = firestore.collection("orders")
             .whereEqualTo("userId", uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e("OrderViewModel", "Listen failed: ${error.message}", error)
                     _error.value = error.message
+                    _isUserOrdersLoaded.value = true
                     return@addSnapshotListener
                 }
 
@@ -214,16 +190,79 @@ class OrderViewModel : ViewModel() {
                         }
                     }.sortedByDescending { it.createdAt.toEpochMillis() }
 
-                    _pendingOrders.value = allOrders.filter {
-                        it.status.lowercase() in listOf("pending", "confirmed", "assigned", "accepted", "in_progress")
-                    }
-                    _completedOrders.value = allOrders.filter {
-                        it.status.lowercase() in listOf("completed", "cancelled")
-                    }
-                    _allOrders.value = allOrders
-                    updateUnreadNotificationCount(allOrders)
+                    updateOrdersState(allOrders)
+                    _isUserOrdersLoaded.value = true
+                    context?.let { SessionManager(it).saveOrders(allOrders) }
+                } else {
+                    _isUserOrdersLoaded.value = true
                 }
             }
+    }
+
+    private fun updateOrdersState(orders: List<Order>) {
+        _pendingOrders.value = orders.filter {
+            it.status.lowercase() in listOf("pending", "confirmed", "assigned", "accepted", "in_progress")
+        }
+        _completedOrders.value = orders.filter {
+            it.status.lowercase() in listOf("completed", "cancelled")
+        }
+        _allOrders.value = orders
+        updateUnreadNotificationCount(orders)
+    }
+
+    fun loadServiceOrders(context: Context? = null) {
+        val uid = auth.currentUser?.uid ?: return
+
+        // Initial load from cache
+        context?.let {
+            val cached = SessionManager(it).getServiceOrders()
+            if (cached.isNotEmpty()) {
+                updateServiceOrdersState(cached)
+                _isServiceOrdersLoaded.value = true
+            }
+        }
+
+        ordersListener?.remove()
+        ordersListener = firestore.collection("orders")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("OrderViewModel", "Listen failed: ${error.message}", error)
+                    _error.value = error.message
+                    _isServiceOrdersLoaded.value = true
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val assignedOrders = snapshot.documents.mapNotNull { doc ->
+                        try {
+                            doc.toOrder()
+                        } catch (e: Exception) {
+                            Log.e("OrderViewModel", "Error parsing service doc ${doc.id}: ${e.message}", e)
+                            null
+                        }
+                    }.filter { order ->
+                        order.displayWorkers.any { it.id == uid } ||
+                            order.workers.any { it.id == uid } ||
+                            order.assignedWorkers.any { it.id == uid }
+                    }.sortedByDescending { it.createdAt.toEpochMillis() }
+
+                    updateServiceOrdersState(assignedOrders)
+                    _isServiceOrdersLoaded.value = true
+                    context?.let { SessionManager(it).saveServiceOrders(assignedOrders) }
+                } else {
+                    _isServiceOrdersLoaded.value = true
+                }
+            }
+    }
+
+    private fun updateServiceOrdersState(orders: List<Order>) {
+        _servicePendingOrders.value = orders.filter {
+            it.status.lowercase() in listOf("pending", "confirmed", "assigned", "accepted", "in_progress")
+        }
+        _serviceCompletedOrders.value = orders.filter {
+            it.status.lowercase() in listOf("completed", "cancelled")
+        }
+        _serviceAllOrders.value = orders
     }
 
     fun markNotificationsSeen() {
@@ -250,7 +289,7 @@ class OrderViewModel : ViewModel() {
         return maxOf(updatedAt, createdAt)
     }
 
-    fun observeOrder(orderId: String) {
+    open fun observeOrder(orderId: String) {
         if (orderId.isBlank()) return
 
         orderListener?.remove()
@@ -276,7 +315,7 @@ class OrderViewModel : ViewModel() {
             }
     }
 
-    fun clearObservedOrder() {
+    open fun clearObservedOrder() {
         orderListener?.remove()
         orderListener = null
         _selectedOrder.value = null
@@ -389,6 +428,18 @@ class OrderViewModel : ViewModel() {
         }
     }
 
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return when {
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+            else -> false
+        }
+    }
+
     fun placeOrder(
         context: Context,
         selectedCategories: List<SelectedCategory>,
@@ -401,10 +452,18 @@ class OrderViewModel : ViewModel() {
             return
         }
 
+        if (!isNetworkAvailable(context)) {
+            // Use a unique error message or timestamp to ensure StateFlow emits if retrying while offline
+            _orderState.value = OrderState.Error("network error: No internet connection (${System.currentTimeMillis()})")
+            return
+        }
+
+        // Set loading only after connectivity is confirmed.
+        _orderState.value = OrderState.Loading
+
         viewModelScope.launch {
             try {
-                _orderState.value = OrderState.Loading
-
+                // Already in loading state from above
                 val uploadedUrls = photoUris.map { uri ->
                     CloudinaryManager.uploadOrderImage(context, uri)
                 }
@@ -449,43 +508,27 @@ class OrderViewModel : ViewModel() {
         }
     }
 
-    private fun getDefaultCategories() = listOf(
-        hashMapOf("name" to "Cleaning", "iconName" to "cleaning", "isActive" to true),
-        hashMapOf("name" to "Electrician", "iconName" to "electrician", "isActive" to true),
-        hashMapOf("name" to "Plumber", "iconName" to "plumber", "isActive" to true),
-        hashMapOf("name" to "Carpenter", "iconName" to "carpenter", "isActive" to true),
-        hashMapOf("name" to "Painter", "iconName" to "painter", "isActive" to true),
-        hashMapOf("name" to "Mason", "iconName" to "mason", "isActive" to true),
-        hashMapOf("name" to "Roofing", "iconName" to "roofing", "isActive" to true),
-        hashMapOf("name" to "AC Repair", "iconName" to "ac_repair", "isActive" to true),
-        hashMapOf("name" to "Glazier", "iconName" to "glazier", "isActive" to true),
-        hashMapOf("name" to "Cook", "iconName" to "cook", "isActive" to true),
-        hashMapOf("name" to "Babysitter", "iconName" to "babysitter", "isActive" to true),
-        hashMapOf("name" to "Home Nurse", "iconName" to "nurse", "isActive" to true),
-        hashMapOf("name" to "Car Wash", "iconName" to "car_wash", "isActive" to true),
-        hashMapOf("name" to "Moving", "iconName" to "moving", "isActive" to true),
-        hashMapOf("name" to "Gardener", "iconName" to "gardener", "isActive" to true),
-        hashMapOf("name" to "Mechanic", "iconName" to "mechanic", "isActive" to true),
-        hashMapOf("name" to "Delivery", "iconName" to "delivery", "isActive" to true),
-        hashMapOf("name" to "Errands", "iconName" to "errands", "isActive" to true)
-    )
+    private fun getDefaultCategories() = defaultServiceCategories
 
     fun seedCategoriesIfEmpty() {
         viewModelScope.launch {
             try {
+                val defaultCategories = getDefaultCategories()
                 val snapshot = firestore.collection("categories").get().await()
+                val existingCategoryIds = snapshot.documents.map { it.id }.toSet()
+
                 if (snapshot.isEmpty) {
-                    seedCategoriesInternal()
-                } else {
-                    val existingNames = snapshot.documents.mapNotNull {
-                        it.getString("name")?.lowercase()?.trim()
+                    Log.d("OrderViewModel", "Firestore categories collection is empty. Seeding all default categories.")
+                    for (category in defaultCategories) {
+                        firestore.collection("categories").document(category.id).set(category, SetOptions.merge()).await()
+                        Log.d("OrderViewModel", "Seeded category: ${category.name} with ID: ${category.id}")
                     }
-                    val defaultCategories = getDefaultCategories()
-                    defaultCategories.forEach { category ->
-                        val name = category["name"] as String
-                        if (name.lowercase().trim() !in existingNames) {
-                            firestore.collection("categories").add(category).await()
-                            Log.d("OrderViewModel", "Seeded missing category: $name")
+                } else {
+                    Log.d("OrderViewModel", "Firestore categories collection is not empty. Checking for missing default categories.")
+                    for (category in defaultCategories) {
+                        if (category.id !in existingCategoryIds) {
+                            firestore.collection("categories").document(category.id).set(category, SetOptions.merge()).await()
+                            Log.d("OrderViewModel", "Seeded missing default category: ${category.name} with ID: ${category.id}")
                         }
                     }
                 }
@@ -495,11 +538,10 @@ class OrderViewModel : ViewModel() {
         }
     }
 
-    private suspend fun seedCategoriesInternal() {
-        val defaultCategories = getDefaultCategories()
-        for (category in defaultCategories) {
-            firestore.collection("categories").add(category).await()
-            Log.d("OrderViewModel", "Seeded category: ${category["name"]}")
+    private fun Category.withFixedIcon(): Category {
+        return when (name.lowercase().trim()) {
+            "pest control" -> copy(iconName = "cockroach")
+            else -> this
         }
     }
 

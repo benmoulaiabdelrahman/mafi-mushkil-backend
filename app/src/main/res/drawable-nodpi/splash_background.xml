@@ -5,22 +5,11 @@
 
     <!-- App Logo in the center -->
     <item
-        android:width="140dp"
-        android:height="140dp"
+        android:width="144dp"
+        android:height="144dp"
         android:gravity="center">
         <bitmap
-            android:src="@drawable/app_logo"
-            android:gravity="center" />
-    </item>
-
-    <!-- Branding at the bottom -->
-    <item
-        android:width="160dp"
-        android:height="50dp"
-        android:gravity="bottom|center_horizontal"
-        android:bottom="64dp">
-        <bitmap
-            android:src="@drawable/pixel_io_technologies"
+            android:src="@drawable/app_logo_reversed"
             android:gravity="center" />
     </item>
 </layer-list>

@@ -1,5 +1,6 @@
 package com.vardash.mafimushkil.auth
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,6 +26,7 @@ class ApplicationViewModel : ViewModel() {
     val applicationState: StateFlow<ApplicationState> = _applicationState.asStateFlow()
 
     fun submitWorkerApplication(
+        context: Context,
         fullName: String,
         phone: String,
         email: String,
@@ -56,6 +58,8 @@ class ApplicationViewModel : ViewModel() {
                     .document(uid)
                     .set(applicationData, SetOptions.merge())
                     .await()
+                
+                SessionManager(context).saveUserStates("pending", SessionManager(context).getCompanyState())
 
                 Log.d(TAG, "Worker application saved to 'users' collection for $uid")
                 _applicationState.value = ApplicationState.Success
@@ -67,6 +71,7 @@ class ApplicationViewModel : ViewModel() {
     }
 
     fun submitCompanyApplication(
+        context: Context,
         companyName: String,
         ownerName: String,
         phone: String,
@@ -102,6 +107,8 @@ class ApplicationViewModel : ViewModel() {
                 document
                     .set(applicationData)
                     .await()
+                
+                SessionManager(context).saveUserStates(SessionManager(context).getWorkerState(), "pending")
 
                 Log.d(TAG, "Company application saved to 'companies' collection: ${document.id}")
                 _applicationState.value = ApplicationState.Success

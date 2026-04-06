@@ -97,6 +97,7 @@ fun OrderDetailScreen(
         order = order,
         orderState = orderState,
         userProfile = userProfile,
+        profileViewModel = profileViewModel,
         onBack = { navController.popBackStack() },
         onConfirmDetails = { orderViewModel.confirmOrderDetails(orderId) },
         onViewWorkers = { },
@@ -111,6 +112,7 @@ private fun OrderDetailContent(
     order: Order?,
     orderState: OrderState,
     userProfile: UserProfile,
+    profileViewModel: ProfileViewModel = viewModel(),
     onBack: () -> Unit,
     onConfirmDetails: () -> Unit = {},
     onViewWorkers: () -> Unit = {},
@@ -152,96 +154,105 @@ private fun OrderDetailContent(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.White,
+        containerColor = Color(0xFFF7F8FA),
         bottomBar = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (status == "accepted") {
-                    Surface(
-                        color = Color(0xFFF7F8FA),
-                        modifier = Modifier.fillMaxWidth()
+            if (status == "accepted") {
+                Surface(
+                    color = Color.Transparent,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .navigationBarsPadding(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .navigationBarsPadding(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 16.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFFFB74D).copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.ErrorOutline,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFFB74D),
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    text = "لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى مراجعتها ثم تأكيد التفاصيل.",
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF1A1A1A),
-                                    lineHeight = 18.sp,
-                                    modifier = Modifier.weight(1f),
-                                    fontFamily = Questv1FontFamily
-                                )
-                            }
-                            Button(
-                                onClick = { showConfirmSheet = true },
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828))
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFB74D).copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = "تأكيد التفاصيل",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    fontFamily = Questv1FontFamily
+                                Icon(
+                                    Icons.Outlined.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFB74D),
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = "لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى مراجعتها ثم تأكيد التفاصيل.",
+                                fontSize = 13.sp,
+                                color = Color(0xFF1A1A1A),
+                                lineHeight = 18.sp,
+                                modifier = Modifier.weight(1f),
+                                fontFamily = Questv1FontFamily
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { showConfirmSheet = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = Color(0xFF282828)
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF282828))
+                        ) {
+                            Text(
+                                text = "تأكيد التفاصيل",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                fontFamily = Questv1FontFamily
+                            )
                         }
                     }
                 }
-
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                ) {
+                    AppBottomBar(
+                        navController = navController,
+                        selectedRoute = Routes.Orders,
+                        profileViewModel = profileViewModel,
+                        containerColor = Color.Transparent
+                    )
+                }
+            }
+        },
+        contentWindowInsets = WindowInsets(0.dp)
+    ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color(0xFFF7F8FA))
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.White)
                 ) {
-                    AppBottomBar(navController = navController, selectedIndex = 1)
-                }
-            }
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF7F8FA))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-            ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                            .height(56.dp)
+                            .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = onBack) {
@@ -254,8 +265,11 @@ private fun OrderDetailContent(
                             text = stringResource(R.string.order_detail_title),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f),
-                            fontFamily = Questv1FontFamily
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp),
+                            fontFamily = Questv1FontFamily,
+                            textAlign = TextAlign.Center
                         )
                         IconButton(
                             onClick = { showHelpSheet = true },
@@ -821,7 +835,8 @@ private fun OrderDetailContent(
                     onClick = { showWorkersSheet = false },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(56.dp)
+                        .padding(bottom = 12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -1025,19 +1040,19 @@ private fun ApplyOrderDetailBars(
 
         when (mode) {
             OrderDetailBarsMode.Normal, OrderDetailBarsMode.ImagePreview -> {
-                window.statusBarColor = white
-                window.navigationBarColor = white
+                window.statusBarColor = transparent
+                window.navigationBarColor = transparent
                 WindowCompat.getInsetsController(window, view).apply {
                     isAppearanceLightStatusBars = true
                     isAppearanceLightNavigationBars = true
                 }
             }
             OrderDetailBarsMode.Sheet -> {
-                window.statusBarColor = transparent
-                window.navigationBarColor = transparent
+                window.statusBarColor = white
+                window.navigationBarColor = white
                 WindowCompat.getInsetsController(window, view).apply {
-                    isAppearanceLightStatusBars = false
-                    isAppearanceLightNavigationBars = false
+                    isAppearanceLightStatusBars = true
+                    isAppearanceLightNavigationBars = true
                 }
             }
         }

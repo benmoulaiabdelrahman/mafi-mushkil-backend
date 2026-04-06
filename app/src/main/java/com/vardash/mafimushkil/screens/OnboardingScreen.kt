@@ -73,8 +73,7 @@ fun OnboardingScreen(navController: NavController) {
                         painter = painterResource(id = page.resId),
                         contentDescription = stringResource(page.titleRes),
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(280.dp),
+                            .size(350.dp),
                         contentScale = ContentScale.Fit
                     )
                 }

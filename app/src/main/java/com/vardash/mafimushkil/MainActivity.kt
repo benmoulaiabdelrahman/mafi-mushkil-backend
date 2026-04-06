@@ -13,6 +13,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.compose.runtime.getValue
@@ -29,6 +30,7 @@ import com.vardash.mafimushkil.auth.FcmTokenManager
 import com.vardash.mafimushkil.auth.NotificationChannelHelper
 import com.vardash.mafimushkil.auth.OrderViewModel
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
+import com.vardash.mafimushkil.ui.theme.Accent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,6 +57,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setTheme(R.style.Theme_MafiMushkil)
 
         val firestore = FirebaseFirestore.getInstance()
         val settings = FirebaseFirestoreSettings.Builder()
@@ -87,10 +90,15 @@ class MainActivity : ComponentActivity() {
             )
         )
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+
         setContent {
+            val startDestination = intent.getStringExtra(EXTRA_START_DESTINATION) ?: Routes.Splash
             MafiMushkilTheme {
                 AppNavigation(
-                    startDestination = Routes.Splash,
+                    startDestination = startDestination,
                     paymentReturnRequest = paymentReturnRequest,
                     notificationOpenRequest = notificationOpenRequest,
                     onPaymentReturnConsumed = { paymentReturnRequest = null },

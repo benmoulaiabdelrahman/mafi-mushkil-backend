@@ -1,5 +1,6 @@
 package com.vardash.mafimushkil.screens
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -43,8 +45,42 @@ import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.ApplicationState
 import com.vardash.mafimushkil.auth.ApplicationViewModel
+import com.vardash.mafimushkil.models.ServiceCategoryOption
+import com.vardash.mafimushkil.models.serviceCategoryOptions
+import com.vardash.mafimushkil.ui.theme.Accent
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
+
+private fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return when {
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> true
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+        else -> false
+    }
+}
+
+private fun isNetworkError(message: String): Boolean {
+    val errorMsg = message.lowercase()
+    return errorMsg.contains("network error") ||
+        errorMsg.contains("timeout") ||
+        errorMsg.contains("unreachable") ||
+        errorMsg.contains("failed to connect") ||
+        errorMsg.contains("host")
+}
+
+private fun matchesServiceCategory(raw: String, option: ServiceCategoryOption, context: Context): Boolean {
+    val key = raw.lowercase().trim()
+    val localized = context.getString(option.labelResId).lowercase().trim()
+    return key == option.category.id.lowercase().trim() ||
+        key == option.category.name.lowercase().trim() ||
+        key == option.category.iconName.lowercase().trim() ||
+        key == localized
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +89,7 @@ fun CompanyFormScreen(
     applicationViewModel: ApplicationViewModel = viewModel()
 ) {
     val applicationState by applicationViewModel.applicationState.collectAsState()
+    val context = LocalContext.current
 
     // Using rememberSaveable to ensure data survives navigation back/forth
     var companyName by rememberSaveable { mutableStateOf("") }
@@ -70,6 +107,7 @@ fun CompanyFormScreen(
 
     var showWorkerTypeSheet by remember { mutableStateOf(false) }
     var showSuccessSheet by remember { mutableStateOf(false) }
+    var showNoInternetSheet by remember { mutableStateOf(false) }
 
     // Listen for address from SelectLocationScreen
     val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
@@ -89,10 +127,20 @@ fun CompanyFormScreen(
             address.isNotBlank() &&
             selectedWorkerTypes.isNotEmpty()
 
+    val selectedWorkerTypesLabel = selectedWorkerTypes.joinToString(", ") { selectedName ->
+        serviceCategoryOptions.firstOrNull { option -> option.category.name == selectedName }
+            ?.let { option -> context.getString(option.labelResId) }
+            ?: selectedName
+    }
+
     LaunchedEffect(applicationState) {
         if (applicationState is ApplicationState.Success) {
             showSuccessSheet = true
             applicationViewModel.resetState()
+        } else if (applicationState is ApplicationState.Error) {
+            if (isNetworkError((applicationState as ApplicationState.Error).message)) {
+                showNoInternetSheet = true
+            }
         }
     }
 
@@ -181,7 +229,7 @@ fun CompanyFormScreen(
                     ) {
                         Text(
                             text = if (selectedWorkerTypes.isEmpty()) stringResource(R.string.worker_type)
-                            else selectedWorkerTypes.joinToString(", "),
+                            else selectedWorkerTypesLabel,
                             color = if (selectedWorkerTypes.isEmpty()) Color(0xFFAAAAAA) else Color(0xFF282828),
                             fontSize = 14.sp,
                             maxLines = 1,
@@ -234,16 +282,21 @@ fun CompanyFormScreen(
 
             Button(
                 onClick = {
-                    applicationViewModel.submitCompanyApplication(
-                        companyName = companyName,
-                        ownerName = supervisorName,
-                        phone = phoneNumber,
-                        email = email,
-                        city = address,
-                        serviceType = selectedWorkerTypes.joinToString(", "),
-                        registrationNumber = "",
-                        description = ""
-                    )
+                    if (isNetworkAvailable(context)) {
+                        applicationViewModel.submitCompanyApplication(
+                            context = context,
+                            companyName = companyName,
+                            ownerName = supervisorName,
+                            phone = phoneNumber,
+                            email = email,
+                            city = address,
+                            serviceType = selectedWorkerTypes.joinToString(", "),
+                            registrationNumber = "",
+                            description = ""
+                        )
+                    } else {
+                        showNoInternetSheet = true
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -255,9 +308,9 @@ fun CompanyFormScreen(
                     disabledContentColor = Color.White
                 ),
                 elevation = ButtonDefaults.buttonElevation(0.dp)
-            ) {
+                ) {
                 if (applicationState is ApplicationState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Accent)
                 } else {
                     Text(
                         text = stringResource(R.string.submit),
@@ -270,14 +323,17 @@ fun CompanyFormScreen(
 
             if (applicationState is ApplicationState.Error) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    text = (applicationState as ApplicationState.Error).message,
-                    color = Color.Red,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                    fontFamily = Questv1FontFamily
-                )
+                val errorMessage = (applicationState as ApplicationState.Error).message
+                if (!isNetworkError(errorMessage)) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontFamily = Questv1FontFamily
+                    )
+                }
             }
 
             Spacer(Modifier.height(40.dp))
@@ -319,17 +375,17 @@ fun CompanyFormScreen(
                 LazyColumn(
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    items(workerWorkTypesList) { type ->
-                        val typeName = stringResource(type.labelRes)
-                        val isSelected = selectedWorkerTypes.contains(typeName)
+                    items(serviceCategoryOptions) { type ->
+                        val typeName = stringResource(type.labelResId)
+                        val isSelected = selectedWorkerTypes.contains(type.category.name)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     val newSet = if (isSelected)
-                                        selectedWorkerTypes - typeName
+                                        selectedWorkerTypes - type.category.name
                                     else
-                                        selectedWorkerTypes + typeName
+                                        selectedWorkerTypes + type.category.name
                                     selectedWorkerTypesString = newSet.joinToString("|")
                                 }
                                 .padding(vertical = 12.dp),
@@ -338,7 +394,7 @@ fun CompanyFormScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Image(
-                                    painter = painterResource(type.iconRes),
+                                    painter = painterResource(getCategoryIcon(type.category.iconName)),
                                     contentDescription = typeName,
                                     modifier = Modifier.size(36.dp),
                                     contentScale = ContentScale.Fit
@@ -478,6 +534,25 @@ fun CompanyFormScreen(
                 }
             }
         }
+    }
+
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                applicationViewModel.submitCompanyApplication(
+                    context = context,
+                    companyName = companyName,
+                    ownerName = supervisorName,
+                    phone = phoneNumber,
+                    email = email,
+                    city = address,
+                    serviceType = selectedWorkerTypes.joinToString(", "),
+                    registrationNumber = "",
+                    description = ""
+                )
+            }
+        )
     }
 }
 

@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +37,9 @@ import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.AuthViewModel
 import com.vardash.mafimushkil.auth.OrderViewModel
+import com.vardash.mafimushkil.auth.ProfileViewModel
+import com.vardash.mafimushkil.models.Category
+import com.vardash.mafimushkil.models.defaultServiceCategories
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
@@ -43,15 +48,28 @@ import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 fun HomeScreen(
     navController: NavController,
     authViewModel: AuthViewModel = viewModel(),
-    orderViewModel: OrderViewModel = viewModel()
+    orderViewModel: OrderViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel(),
+    onContentReady: () -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
     var isMenuVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var homeLaidOut by remember { mutableStateOf(false) }
     
-    val categories by orderViewModel.categories.collectAsState()
+    val categoriesFromVm by orderViewModel.categories.collectAsState()
+    val categoriesReady by orderViewModel.categoriesReady.collectAsState()
     val isLoading by orderViewModel.isLoading.collectAsState()
     val error by orderViewModel.error.collectAsState()
+
+    val isInspectionMode = LocalInspectionMode.current
+    
+    // Use mockup data in Preview mode
+    val categories = if (isInspectionMode) {
+        defaultServiceCategories.take(8)
+    } else {
+        categoriesFromVm
+    }
 
     val filteredCategories = remember(searchQuery, categories) {
         val query = searchQuery.trim()
@@ -65,12 +83,24 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadCategories()
+        // Skip Firebase interaction in Preview
+        if (!isInspectionMode) {
+            orderViewModel.loadCategories()
+        }
+    }
+
+    LaunchedEffect(categoriesReady, homeLaidOut, isInspectionMode) {
+        if ((categoriesReady || isInspectionMode) && homeLaidOut) {
+            onContentReady()
+        }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onGloballyPositioned {
+                homeLaidOut = true
+            }
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
@@ -81,7 +111,11 @@ fun HomeScreen(
             contentWindowInsets = WindowInsets(0.dp),
             containerColor = Color(0xFFF8F9FD),
             bottomBar = {
-                AppBottomBar(navController = navController, selectedIndex = 0)
+                AppBottomBar(
+                    navController = navController,
+                    selectedRoute = Routes.Home,
+                    profileViewModel = profileViewModel
+                )
             }
         ) { paddingValues ->
             Column(
@@ -96,20 +130,24 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .wrapContentHeight()
                 ) {
-                    Box(
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .background(Color(0xFFCCFD04))
+                ) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
-                            .background(Color(0xFFCCFD04))
-                            .statusBarsPadding()
+                            .padding(
+                                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 20.dp,
+                                start = 24.dp,
+                                end = 24.dp,
+                                bottom = 20.dp
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 20.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Image(
                                     painter = painterResource(id = R.drawable.app_logo),
@@ -198,11 +236,11 @@ fun HomeScreen(
                     fontFamily = Questv1FontFamily
                 )
 
-                if (isLoading) {
+                if (isLoading && !isInspectionMode) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color.Black)
                     }
-                } else if (error != null) {
+                } else if (error != null && !isInspectionMode) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Error: $error", color = Color.Red, fontFamily = Questv1FontFamily)
                     }
@@ -269,6 +307,20 @@ private fun categorySearchLabel(name: String): String {
         key == "electrician" -> "كهربائي"
         key == "plumber" || key == "repairing" -> "سباك"
         key == "carpenter" -> "نجار"
+        key == "pest control" -> "مكافحة الحشرات"
+        key == "locksmith" -> "فتح أقفال"
+        key == "appliance repair" -> "إصلاح أجهزة منزلية"
+        key == "flooring / tiling" -> "أرضيات وبلاط"
+        key == "interior design" -> "ديكور داخلي"
+        key == "welding / ironwork" -> "حدادة"
+        key == "satellite / tv installation" -> "تركيب أطباق وتلفزيون"
+        key == "barber / haircut at home" -> "حلاق منزلي"
+        key == "beauty & makeup" -> "مكياج وتجميل"
+        key == "personal trainer" -> "مدرب رياضي"
+        key == "photographer / videographer" -> "مصور"
+        key == "tutoring / private teacher" -> "معلم خصوصي"
+        key == "it & tech support" -> "دعم تقني"
+        key == "veterinarian" -> "بيطري"
         key == "painter" -> "دهان"
         key == "mason" || key == "contractor" -> "بناء / مقاول"
         key == "roofing" || key == "waterproofing" -> "سقف / عزل"

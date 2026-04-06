@@ -1,8 +1,10 @@
 package com.vardash.mafimushkil
 
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -12,6 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,7 +32,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import android.net.Uri
-import android.util.Log
 import androidx.core.view.WindowCompat
 import com.vardash.mafimushkil.auth.ApplicationViewModel
 import com.vardash.mafimushkil.auth.AuthViewModel
@@ -46,6 +51,7 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val view = LocalView.current
+    var homeContentReady by remember { mutableStateOf(false) }
     val currentRoute = navController.currentBackStackEntryAsState().value
         ?.destination
         ?.route
@@ -58,25 +64,45 @@ fun AppNavigation(
     val orderViewModel: OrderViewModel = viewModel()
     val applicationViewModel: ApplicationViewModel = viewModel()
 
-    val bottomBarRoutes = listOf(Routes.Home, Routes.Orders, Routes.Promotions, Routes.Notifications)
+    val bottomBarRoutes = listOf(Routes.Home, Routes.Services, Routes.Orders, Routes.Promotions, Routes.Notifications)
 
     LaunchedEffect(navController) {
         onNavControllerReady(navController)
     }
 
+    LaunchedEffect(profileViewModel) {
+        profileViewModel.loadUserProfile()
+    }
+
+    LaunchedEffect(activeRoute) {
+        if (activeRoute != Routes.Home) {
+            homeContentReady = false
+        }
+    }
+
     SideEffect {
+        val statusBarColor = when {
+            activeRoute == Routes.Splash -> Color(0xFFCCFD04)
+            activeRoute in bottomBarRoutes || activeRoute == Routes.Categories || activeRoute == Routes.ChooseOnMap ||
+            activeRoute == Routes.MyProfile || activeRoute == Routes.ContactUs || activeRoute == Routes.BecomeWorker ||
+            activeRoute == Routes.Services || activeRoute == Routes.WorkerForm || activeRoute == Routes.RegisterCompany || activeRoute == Routes.RevokeRegistration ||
+            activeRoute.startsWith("${Routes.ServiceOrderDetail}/") || activeRoute.startsWith("${Routes.ServiceOrderMap}/") ||
+            activeRoute.startsWith("${Routes.RevokeRegistration}/") || activeRoute == Routes.CompanyForm || activeRoute == Routes.PlaceOrder -> Color.Transparent
+            else -> Color.White
+        }
+        val navigationBarColor = when {
+            activeRoute == Routes.Splash -> Color(0xFFCCFD04)
+            activeRoute == Routes.PlaceOrder || activeRoute == Routes.Details || activeRoute == Routes.Categories ||
+            activeRoute == Routes.SelectLocation || activeRoute == Routes.ChooseOnMap || activeRoute == Routes.MyProfile ||
+            activeRoute == Routes.ContactUs || activeRoute == Routes.BecomeWorker || activeRoute == Routes.Services || activeRoute == Routes.WorkerForm ||
+            activeRoute == Routes.RegisterCompany || activeRoute == Routes.RevokeRegistration ||
+            activeRoute.startsWith("${Routes.ServiceOrderDetail}/") || activeRoute.startsWith("${Routes.ServiceOrderMap}/") ||
+            activeRoute.startsWith("${Routes.RevokeRegistration}/") || activeRoute == Routes.CompanyForm -> Color.Transparent
+            activeRoute == Routes.Home -> Color.White
+            else -> Color.White
+        }
         if (!view.isInEditMode) {
             (view.context as? android.app.Activity)?.window?.let { window ->
-                val statusBarColor = if (activeRoute == Routes.Home || activeRoute == Routes.Splash) {
-                    Color(0xFFCCFD04)
-                } else {
-                    Color.White
-                }
-                val navigationBarColor = if (activeRoute == Routes.Home || activeRoute == Routes.Splash) {
-                    Color(0xFFCCFD04)
-                } else {
-                    Color.White
-                }
                 window.statusBarColor = statusBarColor.toArgb()
                 window.navigationBarColor = navigationBarColor.toArgb()
                 WindowCompat.getInsetsController(window, view).apply {
@@ -91,6 +117,13 @@ fun AppNavigation(
         val initialRoute = initial?.destination?.route?.split("?")?.get(0)
         val targetRoute = target?.destination?.route?.split("?")?.get(0)
         return initialRoute in bottomBarRoutes && targetRoute in bottomBarRoutes
+    }
+
+    fun isHomeCardTransition(initial: NavBackStackEntry?, target: NavBackStackEntry?): Boolean {
+        val initialRoute = initial?.destination?.route?.split("?")?.get(0)
+        val targetRoute = target?.destination?.route?.split("?")?.get(0)
+        return (initialRoute == Routes.Home && targetRoute in setOf(Routes.PlaceOrder, Routes.Categories)) ||
+            (targetRoute == Routes.Home && initialRoute in setOf(Routes.PlaceOrder, Routes.Categories))
     }
 
     LaunchedEffect(paymentReturnRequest) {
@@ -123,42 +156,62 @@ fun AppNavigation(
         navController = navController,
         startDestination = startDestination,
         enterTransition = {
-            if (isBottomBarTransition(initialState, targetState)) {
-                fadeIn(animationSpec = tween(200))
+            if (isHomeCardTransition(initialState, targetState)) {
+                slideInHorizontally(
+                    initialOffsetX = { it },
+                    animationSpec = tween(500)
+                )
+            } else if (isBottomBarTransition(initialState, targetState)) {
+                EnterTransition.None
             } else {
                 slideInHorizontally(
                     initialOffsetX = { it }, // slides in from RIGHT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             }
         },
         exitTransition = {
-            if (isBottomBarTransition(initialState, targetState)) {
-                fadeOut(animationSpec = tween(200))
+            if (isHomeCardTransition(initialState, targetState)) {
+                slideOutHorizontally(
+                    targetOffsetX = { -it },
+                    animationSpec = tween(500)
+                )
+            } else if (isBottomBarTransition(initialState, targetState)) {
+                ExitTransition.None
             } else {
                 slideOutHorizontally(
                     targetOffsetX = { -it }, // exits to LEFT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             }
         },
         popEnterTransition = {
-            if (isBottomBarTransition(initialState, targetState)) {
-                fadeIn(animationSpec = tween(200))
+            if (isHomeCardTransition(initialState, targetState)) {
+                slideInHorizontally(
+                    initialOffsetX = { -it },
+                    animationSpec = tween(500)
+                )
+            } else if (isBottomBarTransition(initialState, targetState)) {
+                EnterTransition.None
             } else {
                 slideInHorizontally(
                     initialOffsetX = { -it }, // back: slides in from LEFT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             }
         },
         popExitTransition = {
-            if (isBottomBarTransition(initialState, targetState)) {
-                fadeOut(animationSpec = tween(200))
+            if (isHomeCardTransition(initialState, targetState)) {
+                slideOutHorizontally(
+                    targetOffsetX = { it },
+                    animationSpec = tween(500)
+                )
+            } else if (isBottomBarTransition(initialState, targetState)) {
+                ExitTransition.None
             } else {
                 slideOutHorizontally(
                     targetOffsetX = { it }, // back: exits to RIGHT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             }
         }
@@ -172,7 +225,16 @@ fun AppNavigation(
         }
         composable(Routes.Welcome)     { WelcomeScreen(navController) }
         composable(Routes.Onboarding)  { OnboardingScreen(navController) }
-        composable(Routes.Home)        { HomeScreen(navController, authViewModel = authViewModel, orderViewModel = orderViewModel) }
+        composable(Routes.Home)        {
+            HomeScreen(
+                navController,
+                authViewModel = authViewModel,
+                orderViewModel = orderViewModel,
+                profileViewModel = profileViewModel,
+                onContentReady = { homeContentReady = true }
+            )
+        }
+        composable(Routes.Services)    { ServicesScreen(navController, orderViewModel, profileViewModel) }
         
         composable(
             route = "${Routes.Categories}?mode={mode}",
@@ -242,6 +304,7 @@ fun AppNavigation(
             OrdersScreen(
                 navController = navController,
                 orderViewModel = orderViewModel,
+                profileViewModel = profileViewModel,
                 initialTab = initialTab
             )
         }
@@ -287,8 +350,8 @@ fun AppNavigation(
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
             PaymentsScreen(navController, orderId, orderViewModel)
         }
-        composable(Routes.Promotions)  { PromotionsScreen(navController) }
-        composable(Routes.Notifications) { NotificationsScreen(navController, orderViewModel) }
+        composable(Routes.Promotions)  { PromotionsScreen(navController, profileViewModel) }
+        composable(Routes.Notifications) { NotificationsScreen(navController, orderViewModel, profileViewModel) }
         composable(Routes.PhoneVerification) { PhoneVerificationScreen(navController, authViewModel = authViewModel) }
         composable(
             route = "${Routes.OtpVerification}/{phoneNumber}",
@@ -304,26 +367,26 @@ fun AppNavigation(
             route = Routes.MyProfile,
             enterTransition = {
                 slideInHorizontally(
-                    initialOffsetX = { -it }, // slide in from LEFT
-                    animationSpec = tween(300)
+                    initialOffsetX = { it }, // slide in from RIGHT
+                    animationSpec = tween(500)
                 )
             },
             exitTransition = {
                 slideOutHorizontally(
                     targetOffsetX = { it }, // exit to RIGHT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             },
             popEnterTransition = {
                 slideInHorizontally(
-                    initialOffsetX = { it }, // back: slide in from RIGHT
-                    animationSpec = tween(300)
+                    initialOffsetX = { -it }, // back: slide in from LEFT
+                    animationSpec = tween(500)
                 )
             },
             popExitTransition = {
                 slideOutHorizontally(
                     targetOffsetX = { -it }, // back: exit to LEFT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             }
         ) { MyProfileScreen(navController, profileViewModel) }
@@ -349,26 +412,26 @@ fun AppNavigation(
             route = Routes.ContactUs,
             enterTransition = {
                 slideInHorizontally(
-                    initialOffsetX = { -it }, // slide in from LEFT
-                    animationSpec = tween(300)
+                    initialOffsetX = { it }, // slide in from RIGHT
+                    animationSpec = tween(500)
                 )
             },
             exitTransition = {
                 slideOutHorizontally(
                     targetOffsetX = { it }, // exit to RIGHT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             },
             popEnterTransition = {
                 slideInHorizontally(
-                    initialOffsetX = { it }, // back: slide in from RIGHT
-                    animationSpec = tween(300)
+                    initialOffsetX = { -it }, // back: slide in from LEFT
+                    animationSpec = tween(500)
                 )
             },
             popExitTransition = {
                 slideOutHorizontally(
                     targetOffsetX = { -it }, // back: exit to LEFT
-                    animationSpec = tween(300)
+                    animationSpec = tween(500)
                 )
             }
         ) { ContactUsScreen(navController) }
@@ -376,6 +439,37 @@ fun AppNavigation(
         composable(Routes.WorkerForm)   { WorkerFormScreen(navController, applicationViewModel) }
         composable(Routes.RegisterCompany) { RegisterCompanyScreen(navController) }
         composable(Routes.CompanyForm)     { CompanyFormScreen(navController, applicationViewModel) }
+        composable(
+            route = "${Routes.ServiceOrderDetail}/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            ServiceOrderDetailScreen(
+            navController = navController,
+            orderId = backStackEntry.arguments?.getString("orderId") ?: "",
+            orderViewModel = orderViewModel,
+            profileViewModel = profileViewModel
+        )
+        }
+        composable(
+            route = "${Routes.ServiceOrderMap}/{orderId}",
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            ServiceOrderMapScreen(
+                navController = navController,
+                orderId = backStackEntry.arguments?.getString("orderId") ?: "",
+                orderViewModel = orderViewModel
+            )
+        }
+        composable(
+            route = "${Routes.RevokeRegistration}/{target}",
+            arguments = listOf(navArgument("target") { type = NavType.StringType })
+        ) { backStackEntry ->
+            RevokeRegistrationScreen(
+                navController = navController,
+                target = backStackEntry.arguments?.getString("target") ?: "worker",
+                profileViewModel = profileViewModel
+            )
+        }
     }
 }
 

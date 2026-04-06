@@ -1,5 +1,6 @@
 package com.vardash.mafimushkil.screens
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -43,36 +45,42 @@ import com.vardash.mafimushkil.auth.ApplicationState
 import com.vardash.mafimushkil.auth.ApplicationViewModel
 import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.auth.UserProfile
+import com.vardash.mafimushkil.ui.theme.Accent
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
+import com.vardash.mafimushkil.models.ServiceCategoryOption
+import com.vardash.mafimushkil.models.serviceCategoryOptions
 
-// Data class and list moved here to be shared if needed, 
-// using names that won't conflict or cause unresolved references
-data class WorkerWorkType(
-    val labelRes: Int,
-    val iconRes: Int
-)
+private fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return when {
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> true
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+        activeNetwork.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+        else -> false
+    }
+}
 
-val workerWorkTypesList = listOf(
-    WorkerWorkType(R.string.cat_cleaning, R.drawable.cleaning),
-    WorkerWorkType(R.string.cat_electrician, R.drawable.electrician),
-    WorkerWorkType(R.string.cat_plumber, R.drawable.repairing),
-    WorkerWorkType(R.string.cat_carpenter, R.drawable.carpenter),
-    WorkerWorkType(R.string.cat_painter, R.drawable.painter),
-    WorkerWorkType(R.string.cat_mason, R.drawable.mason),
-    WorkerWorkType(R.string.cat_roofing, R.drawable.roofing),
-    WorkerWorkType(R.string.cat_ac_repair, R.drawable.ac_repair),
-    WorkerWorkType(R.string.cat_glazier, R.drawable.glazier),
-    WorkerWorkType(R.string.cat_cook, R.drawable.cook),
-    WorkerWorkType(R.string.cat_babysitter, R.drawable.babysitter),
-    WorkerWorkType(R.string.cat_nurse, R.drawable.nurse),
-    WorkerWorkType(R.string.cat_car_wash, R.drawable.car_wash),
-    WorkerWorkType(R.string.cat_moving, R.drawable.moving),
-    WorkerWorkType(R.string.cat_gardener, R.drawable.gardener),
-    WorkerWorkType(R.string.cat_car_repair, R.drawable.mechanic),
-    WorkerWorkType(R.string.cat_delivery, R.drawable.delivery),
-    WorkerWorkType(R.string.cat_errands, R.drawable.errands)
-)
+private fun isNetworkError(message: String): Boolean {
+    val errorMsg = message.lowercase()
+    return errorMsg.contains("network error") ||
+        errorMsg.contains("timeout") ||
+        errorMsg.contains("unreachable") ||
+        errorMsg.contains("failed to connect") ||
+        errorMsg.contains("host")
+}
+
+private fun matchesServiceCategory(raw: String, option: ServiceCategoryOption, context: Context): Boolean {
+    val key = raw.lowercase().trim()
+    val localized = context.getString(option.labelResId).lowercase().trim()
+    return key == option.category.id.lowercase().trim() ||
+        key == option.category.name.lowercase().trim() ||
+        key == option.category.iconName.lowercase().trim() ||
+        key == localized
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,14 +91,16 @@ fun WorkerFormScreen(
 ) {
     val applicationState by applicationViewModel.applicationState.collectAsState()
     val userProfile by profileViewModel.userProfile.collectAsState()
+    val context = LocalContext.current
 
     WorkerFormContent(
         navController = navController,
         applicationState = applicationState,
         userProfile = userProfile,
-        onLoadProfile = { profileViewModel.loadUserProfile() },
+        onLoadProfile = { profileViewModel.loadUserProfile(context) },
         onSubmit = { fullName, phone, email, services, experience ->
             applicationViewModel.submitWorkerApplication(
+                context = context,
                 fullName = fullName,
                 phone = phone,
                 email = email,
@@ -113,6 +123,7 @@ fun WorkerFormContent(
     onSubmit: (String, String, String, String, String) -> Unit,
     onResetState: () -> Unit
 ) {
+    val context = LocalContext.current
     var fullName by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -120,6 +131,7 @@ fun WorkerFormContent(
     var selectedWorkTypes by remember { mutableStateOf(setOf<String>()) }
     var showWorkTypeSheet by remember { mutableStateOf(false) }
     var showSuccessSheet by remember { mutableStateOf(false) }
+    var showNoInternetSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         onLoadProfile()
@@ -134,7 +146,12 @@ fun WorkerFormContent(
             selectedWorkTypes = userProfile.workerServices
                 .split(",")
                 .map { it.trim() }
-                .filter { it.isNotBlank() }
+                .filter { raw -> serviceCategoryOptions.any { option -> matchesServiceCategory(raw, option, context) } }
+                .mapNotNull { raw ->
+                    serviceCategoryOptions.firstOrNull { option -> matchesServiceCategory(raw, option, context) }
+                        ?.category
+                        ?.name
+                }
                 .toSet()
         }
     }
@@ -148,10 +165,20 @@ fun WorkerFormContent(
         yearsExperience.isNotBlank() &&
         selectedWorkTypes.isNotEmpty()
 
+    val selectedWorkTypesLabel = selectedWorkTypes.joinToString(", ") { selectedName ->
+        serviceCategoryOptions.firstOrNull { option -> option.category.name == selectedName }
+            ?.let { option -> context.getString(option.labelResId) }
+            ?: selectedName
+    }
+
     LaunchedEffect(applicationState) {
         if (applicationState is ApplicationState.Success) {
             showSuccessSheet = true
             onResetState()
+        } else if (applicationState is ApplicationState.Error) {
+            if (isNetworkError((applicationState as ApplicationState.Error).message)) {
+                showNoInternetSheet = true
+            }
         }
     }
 
@@ -243,7 +270,7 @@ fun WorkerFormContent(
                     ) {
                         Text(
                             text = if (selectedWorkTypes.isEmpty()) stringResource(R.string.work_type_placeholder)
-                                   else selectedWorkTypes.joinToString(", "),
+                                   else selectedWorkTypesLabel,
                             color = if (selectedWorkTypes.isEmpty()) Color(0xFFAAAAAA) else Color(0xFF282828),
                             fontSize = 14.sp,
                             maxLines = 1,
@@ -271,13 +298,17 @@ fun WorkerFormContent(
 
             Button(
                 onClick = {
-                    onSubmit(
-                        resolvedFullName,
-                        resolvedPhoneNumber,
-                        resolvedEmail,
-                        selectedWorkTypes.joinToString(", "),
-                        yearsExperience
-                    )
+                    if (isNetworkAvailable(context)) {
+                        onSubmit(
+                            resolvedFullName,
+                            resolvedPhoneNumber,
+                            resolvedEmail,
+                            selectedWorkTypes.joinToString(", "),
+                            yearsExperience
+                        )
+                    } else {
+                        showNoInternetSheet = true
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -289,9 +320,9 @@ fun WorkerFormContent(
                     disabledContentColor = Color.White
                 ),
                 elevation = ButtonDefaults.buttonElevation(0.dp)
-            ) {
+                ) {
                 if (applicationState is ApplicationState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Accent)
                 } else {
                     Text(
                         text = stringResource(R.string.submit),
@@ -304,14 +335,17 @@ fun WorkerFormContent(
 
             if (applicationState is ApplicationState.Error) {
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    text = (applicationState as ApplicationState.Error).message,
-                    color = Color.Red,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                    fontFamily = Questv1FontFamily
-                )
+                val errorMessage = (applicationState as ApplicationState.Error).message
+                if (!isNetworkError(errorMessage)) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontFamily = Questv1FontFamily
+                    )
+                }
             }
         }
     }
@@ -352,17 +386,17 @@ fun WorkerFormContent(
                 LazyColumn(
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    items(workerWorkTypesList) { workType ->
-                        val typeName = stringResource(workType.labelRes)
-                        val isSelected = selectedWorkTypes.contains(typeName)
+                    items(serviceCategoryOptions) { workType ->
+                        val typeName = stringResource(workType.labelResId)
+                        val isSelected = selectedWorkTypes.contains(workType.category.name)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     selectedWorkTypes = if (isSelected)
-                                        selectedWorkTypes - typeName
+                                        selectedWorkTypes - workType.category.name
                                     else
-                                        selectedWorkTypes + typeName
+                                        selectedWorkTypes + workType.category.name
                                 }
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -370,7 +404,7 @@ fun WorkerFormContent(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Image(
-                                    painter = painterResource(workType.iconRes),
+                                    painter = painterResource(getCategoryIcon(workType.category.iconName)),
                                     contentDescription = typeName,
                                     modifier = Modifier.size(36.dp),
                                     contentScale = ContentScale.Fit
@@ -507,6 +541,21 @@ fun WorkerFormContent(
                 }
             }
         }
+    }
+
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                onSubmit(
+                    resolvedFullName,
+                    resolvedPhoneNumber,
+                    resolvedEmail,
+                    selectedWorkTypes.joinToString(", "),
+                    yearsExperience
+                )
+            }
+        )
     }
 }
 

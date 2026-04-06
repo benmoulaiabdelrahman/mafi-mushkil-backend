@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -33,6 +35,7 @@ import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
 import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.OrderViewModel
+import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.models.Order
 import com.vardash.mafimushkil.models.toEpochMillis
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
@@ -219,7 +222,8 @@ fun NotificationCard(
 @Composable
 fun NotificationsScreen(
     navController: NavController,
-    orderViewModel: OrderViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    orderViewModel: OrderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    profileViewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val pendingOrders by orderViewModel.pendingOrders.collectAsState()
     val completedOrders by orderViewModel.completedOrders.collectAsState()
@@ -237,51 +241,61 @@ fun NotificationsScreen(
         }
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0.dp),
-        bottomBar = {
-            // Wrap NavigationBar in a Box that extends white background behind system nav buttons
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White) // white fills behind system buttons
-            ) {
-                AppBottomBar(navController = navController, selectedIndex = 3)
+    NotificationsScreenContent(
+        navController = navController,
+        profileViewModel = profileViewModel,
+        notifications = notifications,
+        onNotificationClick = { notification ->
+            orderViewModel.markNotificationsSeen()
+            hasMarkedSeen = true
+            navController.navigate(Routes.orders(tab = notification.targetTab)) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
+            navController.navigate(Routes.orderDetail(notification.orderId)) {
+                launchSingleTop = true
             }
         }
-    ) { paddingValues ->
+    )
+}
+
+@Composable
+fun NotificationsScreenContent(
+    navController: NavController,
+    profileViewModel: ProfileViewModel,
+    notifications: List<AppNotification>,
+    onNotificationClick: (AppNotification) -> Unit
+) {
+    Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
+            bottomBar = {
+                // Wrap NavigationBar in a Box that extends white background behind system nav buttons
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White) // white fills behind system buttons
+                ) {
+                    AppBottomBar(
+                        navController = navController,
+                        selectedRoute = Routes.Notifications,
+                        profileViewModel = profileViewModel
+                    )
+                }
+            }
+        ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF7F8FA)) // Matched with Home and Order screens
                 .padding(bottom = paddingValues.calculateBottomPadding())
         ) {
-            // ── Wrap white top bar in Box that fills behind status bar ──────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White) // white fills behind status bar
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                ) {
-                    Text(
-                        text = stringResource(R.string.nav_notifications),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        fontFamily = Questv1FontFamily
-                    )
-                }
+            Surface(color = Color.White) {
+                ScreenHeaderTitle(
+                    text = stringResource(R.string.nav_notifications)
+                )
             }
-
-            HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
 
             // ── Body: list or empty state ─────────────────────
             if (notifications.isEmpty()) {
@@ -331,19 +345,7 @@ fun NotificationsScreen(
                     items(notifications, key = { it.id }) { notification ->
                         NotificationCard(
                             notification = notification,
-                            onClick = {
-                                orderViewModel.markNotificationsSeen()
-                                hasMarkedSeen = true
-                                navController.navigate(Routes.orders(tab = notification.targetTab)) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        inclusive = true
-                                    }
-                                    launchSingleTop = true
-                                }
-                                navController.navigate(Routes.orderDetail(notification.orderId)) {
-                                    launchSingleTop = true
-                                }
-                            }
+                            onClick = { onNotificationClick(notification) }
                         )
                     }
                 }
@@ -352,10 +354,52 @@ fun NotificationsScreen(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showBackground = true, showSystemUi = true, locale = "ar")
 @Composable
 fun NotificationsScreenPreview() {
-    MafiMushkilTheme {
-        NotificationsScreen(rememberNavController())
+    CompositionLocalProvider(
+        LocalLayoutDirection provides LayoutDirection.Rtl
+    ) {
+        val mockNotifications = listOf(
+            AppNotification(
+                id = "1",
+                orderId = "order_1",
+                type = NotificationType.ORDER_ACCEPTED,
+                title = "تحديث الطلب",
+                boldWord = "تم قبوله",
+                message = "تم قبول طلبك. يرجى مراجعة التفاصيل وتأكيدها.",
+                timeAgo = "منذ 5 دقائق",
+                sortKey = System.currentTimeMillis()
+            ),
+            AppNotification(
+                id = "2",
+                orderId = "order_2",
+                type = NotificationType.ORDER_ASSIGNED,
+                title = "تحديث الطلب",
+                boldWord = "تم تعيين العمال",
+                message = "تم تعيين العمال لطلبك.",
+                timeAgo = "منذ ساعتين",
+                sortKey = System.currentTimeMillis() - 7200000
+            ),
+            AppNotification(
+                id = "3",
+                orderId = "order_3",
+                type = NotificationType.ORDER_COMPLETED,
+                title = "تحديث الطلب",
+                boldWord = "اكتمل الطلب",
+                message = "تم إكمال طلبك. شكراً لك!",
+                timeAgo = "منذ يوم",
+                sortKey = System.currentTimeMillis() - 86400000
+            )
+        )
+
+        MafiMushkilTheme {
+            NotificationsScreenContent(
+                navController = rememberNavController(),
+                profileViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+                notifications = mockNotifications,
+                onNotificationClick = {}
+            )
+        }
     }
 }

@@ -67,7 +67,7 @@ fun WelcomeScreen(navController: NavController) {
             Image(
                 painter = painterResource(id = R.drawable.worker),
                 contentDescription = stringResource(R.string.worker_image_desc),
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.size(350.dp),
                 contentScale = ContentScale.Fit
             )
         }

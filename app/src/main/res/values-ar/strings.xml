@@ -2,9 +2,8 @@
     <string name="app_name">مافي مشكل</string>
     <string name="mafi_mushkil">مافي\nمشكل</string>
     <string name="app_logo_desc">شعار التطبيق</string>
-    <string name="pixel_io">بكسل آي أو</string>
-    <string name="technologies">للتقنية</string>
-    <string name="pixel_io_desc">بكسل آي أو للتقنية</string>
+    <string name="brand_name">فارداش</string>
+    <string name="brand_desc">فارداش</string>
 
     <!-- Welcome Screen -->
     <string name="welcome_title">أفضل الأيادي العاملة\nمن أجل المساعدة</string>
@@ -27,6 +26,11 @@
     <string name="security_verification_title">التحقق الأمني</string>
     <string name="security_verification_subtitle">هذا هو أول تسجيل دخول لك من هذا الجهاز. لضمان أمن حسابك، يرجى التحقق من هويتك.</string>
     <string name="start_to_verify">ابدأ التحقق</string>
+
+    <!-- No Internet Sheet -->
+    <string name="no_internet_title">لا يوجد اتصال بالإنترنت</string>
+    <string name="no_internet_subtitle">يرجى التحقق من اتصالك والمحاولة مرة أخرى للمتابعة.</string>
+    <string name="try_again">إعادة المحاولة</string>
 
     <!-- Phone Verification -->
     <string name="phone_verification_title">أدخل رقم هاتفك\nللتحقق</string>
@@ -55,12 +59,13 @@
 
     <!-- Navigation -->
     <string name="nav_home">الرئيسية</string>
+    <string name="nav_services">خدماتي</string>
     <string name="nav_orders">طلباتي</string>
     <string name="nav_promotions">العروض</string>
     <string name="nav_notifications">التنبيهات</string>
 
     <!-- Categories -->
-    <string name="categories_title">الفئات</string>
+    <string name="categories_title">الخدمات</string>
     <string name="cat_cleaning">تنظيف</string>
     <string name="cat_electrician">كهربائي</string>
     <string name="cat_plumber">سباك</string>
@@ -79,12 +84,28 @@
     <string name="cat_car_repair">إصلاح سيارات</string>
     <string name="cat_delivery">توصيل</string>
     <string name="cat_errands">قضاء حوائج</string>
+    <string name="cat_pest_control">مكافحة الحشرات</string>
+    <string name="cat_locksmith">فتح أقفال</string>
+    <string name="cat_appliance_repair">إصلاح أجهزة منزلية</string>
+    <string name="cat_flooring_tiling">أرضيات وبلاط</string>
+    <string name="cat_interior_design">ديكور داخلي</string>
+    <string name="cat_welding_ironwork">حدادة</string>
+    <string name="cat_satellite_tv_installation">تركيب أطباق وتلفزيون</string>
+    <string name="cat_barber_haircut_at_home">حلاق منزلي</string>
+    <string name="cat_beauty_makeup">مكياج وتجميل</string>
+    <string name="cat_personal_trainer">مدرب رياضي</string>
+    <string name="cat_photographer_videographer">مصور</string>
+    <string name="cat_tutoring_private_teacher">معلم خصوصي</string>
+    <string name="cat_it_tech_support">دعم تقني</string>
+    <string name="cat_veterinarian">بيطري</string>
 
     <!-- Menu Drawer -->
     <string name="menu_profile">حسابي الشخصي</string>
     <string name="menu_contact">اتصل بنا</string>
     <string name="menu_become_worker">كن عاملاً</string>
     <string name="menu_register_company">سجل شركة</string>
+    <string name="menu_revoke_worker">إلغاء تسجيل العامل</string>
+    <string name="menu_revoke_company">إلغاء تسجيل الشركة</string>
     <string name="menu_share">مشاركة</string>
     <string name="menu_rate">تقييم</string>
     <string name="menu_logout">تسجيل الخروج</string>
@@ -94,6 +115,31 @@
     <string name="menu_logout_confirm">هل أنت متأكد أنك تريد تسجيل الخروج؟</string>
     <string name="menu_logout_yes">نعم، سجل خروجي</string>
     <string name="menu_cancel">إلغاء</string>
+    <string name="services_title">خدماتي</string>
+    <string name="services_tab_services">الخدمات</string>
+    <string name="services_tab_history">السجل</string>
+    <string name="services_tab_balance">الرصيد</string>
+    <string name="services_empty_active">لا توجد طلبات خدمات نشطة بعد.</string>
+    <string name="services_empty_active_title">لا يوجد خدمات نشطة</string>
+    <string name="services_empty_active_desc">ابدأ بتأكيد الطلبات لتظهر هنا.</string>
+    <string name="services_empty_history">لا توجد طلبات خدمات مكتملة بعد.</string>
+    <string name="services_empty_history_title">لا يوجد سجل بعد</string>
+    <string name="services_empty_history_desc">ستظهر الطلبات المكتملة هنا بعد إنجازها.</string>
+    <string name="services_no_description">لا يوجد وصف</string>
+    <string name="services_balance_title">إجمالي الأرباح</string>
+    <string name="services_balance_subtitle">%1$d طلبات مكتملة</string>
+    <string name="services_withdraw_button">سحب</string>
+    <string name="services_withdraw_title">السحب</string>
+    <string name="services_withdraw_chargily">السحب عبر Chargily</string>
+    <string name="services_withdraw_later">السحب لاحقاً</string>
+    <string name="services_locate_on_map">تحديد على الخريطة</string>
+    <string name="revoke_goodbye_title">وداعاً مؤقتاً</string>
+    <string name="revoke_worker_subtitle">سيتم حذف تسجيلك كعامل وستعود إلى حساب عادي.</string>
+    <string name="revoke_company_subtitle">سيتم حذف تسجيلك كشركة وستعود إلى حساب عادي.</string>
+    <string name="revoke_goodbye_note_title">يمكنك العودة لاحقاً</string>
+    <string name="revoke_goodbye_note">إذا أردت التسجيل مرة أخرى لاحقاً، يمكنك العودة إلى القائمة وبدء التسجيل من جديد.</string>
+    <string name="revoke_button">إلغاء التسجيل</string>
+    <string name="revoke_cancel">ليس الآن</string>
 
     <!-- Orders Screen -->
     <string name="orders_title">طلباتي</string>
@@ -123,6 +169,10 @@
     <string name="order_detail_help_title">هل تحتاج إلى أي مساعدة؟</string>
     <string name="order_detail_help_desc">بعد التأكيد، سنقوم بتعيين عمال لطلبك.</string>
     <string name="order_detail_contact">اتصال</string>
+    <string name="order_detail_call_client_title">اتصال بالعميل</string>
+    <string name="order_detail_call_client_desc">يمكنك الاتصال بالعميل مباشرة من هاتفك.</string>
+    <string name="order_detail_call_client_unavailable">رقم هاتف العميل غير متوفر حاليا.</string>
+    <string name="order_detail_call_client_button">اتصل الآن</string>
     <string name="order_detail_workers">العمال والمساعدون</string>
     <string name="order_detail_payments">الدفع</string>
 

@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -31,6 +32,7 @@ import com.vardash.mafimushkil.auth.ProfileState
 import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.auth.UserProfile
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
+import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,11 +40,13 @@ fun EditNameScreen(
     navController: NavController,
     profileViewModel: ProfileViewModel? = if (LocalInspectionMode.current) null else viewModel()
 ) {
+    val context = LocalContext.current
     val profileState by (profileViewModel?.profileState?.collectAsState() ?: remember { mutableStateOf(ProfileState.Idle) })
     val userProfile by (profileViewModel?.userProfile?.collectAsState() ?: remember { mutableStateOf(UserProfile()) })
     
     var name by remember(userProfile.name) { mutableStateOf(userProfile.name) }
     var showSuccessSheet by remember { mutableStateOf(false) }
+    var showNoInternetSheet by remember { mutableStateOf(false) }
 
     val isSaveEnabled = name.isNotBlank() && name != userProfile.name && profileState !is ProfileState.Loading
 
@@ -52,6 +56,12 @@ fun EditNameScreen(
             is ProfileState.Success -> {
                 showSuccessSheet = true
                 profileViewModel?.resetState()
+            }
+            is ProfileState.Error -> {
+                val errorMsg = (profileState as ProfileState.Error).message
+                if (errorMsg.contains("network error", ignoreCase = true)) {
+                    showNoInternetSheet = true
+                }
             }
             else -> {}
         }
@@ -88,12 +98,13 @@ fun EditNameScreen(
                         text = stringResource(R.string.edit_name_title),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A)
+                        color = Color(0xFF1A1A1A),
+                        fontFamily = Questv1FontFamily
                     )
                 }
                 // Save button
                 Button(
-                    onClick = { profileViewModel?.updateName(name) },
+                    onClick = { profileViewModel?.updateName(name, context) },
                     enabled = isSaveEnabled,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -105,12 +116,17 @@ fun EditNameScreen(
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     if (profileState is ProfileState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color(0xFFCCFD04),
+                            strokeWidth = 2.dp
+                        )
                     } else {
                         Text(
                             text = stringResource(R.string.save),
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = Questv1FontFamily
                         )
                     }
                 }
@@ -136,13 +152,15 @@ fun EditNameScreen(
                         text = stringResource(R.string.edit_name_placeholder),
                         color = Color(0xFFAAAAAA),
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Questv1FontFamily
                     )
                 },
                 textStyle = TextStyle(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = Color(0xFF1A1A1A),
+                    fontFamily = Questv1FontFamily
                 ),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words
@@ -206,7 +224,8 @@ fun EditNameScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontFamily = Questv1FontFamily
                 )
 
                 Spacer(Modifier.height(28.dp))
@@ -229,11 +248,23 @@ fun EditNameScreen(
                     Text(
                         text = stringResource(R.string.ok),
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = Questv1FontFamily
                     )
                 }
             }
         }
+    }
+
+    // ── No Internet Sheet ─────────────────────────────────
+    if (showNoInternetSheet) {
+        NoInternetSheet(
+            onDismiss = { showNoInternetSheet = false },
+            onTryAgain = {
+                showNoInternetSheet = false
+                profileViewModel?.updateName(name, context)
+            }
+        )
     }
 }
 

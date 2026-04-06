@@ -10,8 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -141,10 +143,15 @@ fun DetailsScreen(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(showBackground = true, showSystemUi = true, locale = "ar")
 @Composable
 fun DetailsScreenPreview() {
-    MafiMushkilTheme {
-        DetailsScreen(navController = rememberNavController())
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        MafiMushkilTheme {
+            DetailsScreen(
+                navController = rememberNavController(),
+                initialDetails = "أحتاج إلى تنظيف شامل للمنزل، مع التركيز بشكل خاص على المطبخ والحمامات. يرجى إحضار جميع أدوات التنظيف اللازمة."
+            )
+        }
     }
 }

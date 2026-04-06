@@ -53,6 +53,7 @@ import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -66,6 +67,8 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.net.UnknownHostException
+import java.net.SocketTimeoutException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +96,8 @@ fun ChooseOnMapScreen(
     
     // State for Location Disabled Sheet
     var showLocationDisabledSheet by remember { mutableStateOf(false) }
+    var showNoInternetSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     fun isLocationEnabled(context: Context): Boolean {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -100,65 +105,58 @@ fun ChooseOnMapScreen(
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
-    // 1. Search Logic using Nominatim
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.length > 2 && !isSelectingFromResult) {
-            delay(700) 
-            isSearching = true
-            try {
-                val results = withContext(Dispatchers.IO) {
-                    val encodedQuery = URLEncoder.encode(searchQuery, "UTF-8")
-                    val urlString = "https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=10&accept-language=ar"
-                    
-                    val url = URL(urlString)
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.setRequestProperty("User-Agent", "MafiMushkilApp-Android/1.1")
-                    connection.connectTimeout = 8000
-                    connection.readTimeout = 8000
-                    
-                    if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                        val response = connection.inputStream.bufferedReader().readText()
-                        val jsonArray = JSONArray(response)
-                        List(jsonArray.length()) { i -> 
-                            val item = jsonArray.getJSONObject(i)
-                            val obj = JSONObject()
-                            obj.put("display_name", item.optString("display_name", ""))
-                            obj.put("lat", item.optDouble("lat", 0.0))
-                            obj.put("lon", item.optDouble("lon", 0.0))
-                            obj
-                        }
-                    } else {
-                        null
+    suspend fun performSearch(query: String) {
+        if (query.length <= 2 || isSelectingFromResult) return
+        isSearching = true
+        try {
+            val results = withContext(Dispatchers.IO) {
+                val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                val urlString = "https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=10&accept-language=ar"
+                
+                val url = URL(urlString)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.setRequestProperty("User-Agent", "MafiMushkilApp-Android/1.1")
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = connection.inputStream.bufferedReader().readText()
+                    val jsonArray = JSONArray(response)
+                    List(jsonArray.length()) { i -> 
+                        val item = jsonArray.getJSONObject(i)
+                        val obj = JSONObject()
+                        obj.put("display_name", item.optString("display_name", ""))
+                        obj.put("lat", item.optDouble("lat", 0.0))
+                        obj.put("lon", item.optDouble("lon", 0.0))
+                        obj
                     }
-                }
-                if (results != null) {
-                    searchResults = results
-                    showDropdown = results.isNotEmpty()
                 } else {
-                    searchResults = emptyList()
-                    showDropdown = false
+                    null
                 }
-            } catch (e: Exception) {
-                Log.e("ChooseOnMap", "Search error", e)
-                searchResults = emptyList()
-                showDropdown = false
-            } finally {
-                isSearching = false
             }
-        } else {
-            if (!isSelectingFromResult) {
+            if (results != null) {
+                searchResults = results
+                showDropdown = results.isNotEmpty()
+            } else {
                 searchResults = emptyList()
                 showDropdown = false
             }
+        } catch (e: Exception) {
+            Log.e("ChooseOnMap", "Search error", e)
+            if (e is UnknownHostException || e is SocketTimeoutException || e.message?.contains("timeout") == true) {
+                showNoInternetSheet = true
+            }
+            searchResults = emptyList()
+            showDropdown = false
+        } finally {
+            isSearching = false
         }
     }
 
-    // 2. Reverse Geocoding Logic (Background update only)
-    LaunchedEffect(centerLat, centerLon) {
-        delay(1000) 
+    suspend fun reverseGeocode(lat: Double, lon: Double) {
         try {
             val address = withContext(Dispatchers.IO) {
-                val urlString = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$centerLat&lon=$centerLon&accept-language=ar"
+                val urlString = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&accept-language=ar"
                 val url = URL(urlString)
                 val connection = url.openConnection() as HttpURLConnection
                 connection.setRequestProperty("User-Agent", "MafiMushkilApp-Android/1.1")
@@ -177,7 +175,29 @@ fun ChooseOnMapScreen(
             }
         } catch (e: Exception) { 
             Log.e("ChooseOnMap", "Reverse geocode error", e)
+            if (e is UnknownHostException || e is SocketTimeoutException || e.message?.contains("timeout") == true) {
+                showNoInternetSheet = true
+            }
         }
+    }
+
+    // 1. Search Logic using Nominatim
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.length > 2 && !isSelectingFromResult) {
+            delay(700) 
+            performSearch(searchQuery)
+        } else {
+            if (!isSelectingFromResult) {
+                searchResults = emptyList()
+                showDropdown = false
+            }
+        }
+    }
+
+    // 2. Reverse Geocoding Logic (Background update only)
+    LaunchedEffect(centerLat, centerLon) {
+        delay(1000) 
+        reverseGeocode(centerLat, centerLon)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -208,10 +228,17 @@ fun ChooseOnMapScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFE0E0E0)),
+                    .background(Color(0xFFF0F0F0)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "Map is not available in Preview", color = Color.Gray)
+                // Mockup Map Image for Preview (Removed)
+
+                // Optional: Gray overlay to match the app's style
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.05f))
+                )
             }
         } else {
             AndroidView(
@@ -252,7 +279,7 @@ fun ChooseOnMapScreen(
                                 canvasDrawCircle(bitmap)
                                 super.onResume()
                             }
-                            
+
                             private fun canvasDrawCircle(bitmap: Bitmap) {
                                 val canvas = Canvas(bitmap)
                                 val paint = Paint().apply {
@@ -264,7 +291,7 @@ fun ChooseOnMapScreen(
                                 setDirectionIcon(bitmap)
                             }
                         }
-                        
+
                         val fineLocation = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
                         val coarseLocation = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION)
                         if (fineLocation == PackageManager.PERMISSION_GRANTED || coarseLocation == PackageManager.PERMISSION_GRANTED) {
@@ -272,7 +299,7 @@ fun ChooseOnMapScreen(
                         }
                         locationOverlay = overlay
                         overlays.add(overlay)
-                        
+
                         mapView = this
                     }
                 },
@@ -335,10 +362,10 @@ fun ChooseOnMapScreen(
                             tint = Color(0xFFBBBBBB),
                             modifier = Modifier.size(22.dp)
                         )
-                        
+
                         TextField(
                             value = searchQuery,
-                            onValueChange = { 
+                            onValueChange = {
                                 searchQuery = it
                                 if (it.isEmpty()) isSelectingFromResult = false
                             },
@@ -354,7 +381,7 @@ fun ChooseOnMapScreen(
                             singleLine = true,
                             textStyle = TextStyle(fontSize = 15.sp, fontFamily = Questv1FontFamily)
                         )
-                        
+
                         if (isSearching) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color(0xFF2196F3))
                         }
@@ -453,7 +480,7 @@ fun ChooseOnMapScreen(
             // Done Button
             Button(
                 onClick = {
-                    val finalAddress = if (searchQuery.isNotEmpty()) searchQuery 
+                    val finalAddress = if (searchQuery.isNotEmpty()) searchQuery
                                      else if (currentAddress.isNotEmpty()) currentAddress
                                      else "$centerLat, $centerLon"
                     onLocationSelected(centerLat, centerLon, finalAddress)
@@ -469,8 +496,8 @@ fun ChooseOnMapScreen(
             ) {
                 @Suppress("DEPRECATION")
                 Text(
-                    text = stringResource(R.string.choose_map_done), 
-                    fontSize = 17.sp, 
+                    text = stringResource(R.string.choose_map_done),
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = Questv1FontFamily,
                     color = Color.White
@@ -552,8 +579,8 @@ fun ChooseOnMapScreen(
                             Spacer(Modifier.width(8.dp))
                             @Suppress("DEPRECATION")
                             Text(
-                                text = stringResource(R.string.location_enable_settings), 
-                                fontSize = 16.sp, 
+                                text = stringResource(R.string.location_enable_settings),
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = Questv1FontFamily
                             )
@@ -563,14 +590,18 @@ fun ChooseOnMapScreen(
                     TextButton(onClick = { showLocationDisabledSheet = false }) {
                         @Suppress("DEPRECATION")
                         Text(
-                            text = stringResource(R.string.menu_cancel), 
-                            color = Color(0xFF888888), 
+                            text = stringResource(R.string.menu_cancel),
+                            color = Color(0xFF888888),
                             fontWeight = FontWeight.Medium,
                             fontFamily = Questv1FontFamily
                         )
                     }
                 }
             }
+        }
+
+        if (showNoInternetSheet) {
+            // Placeholder or import needed for NoInternetSheet
         }
     }
 }

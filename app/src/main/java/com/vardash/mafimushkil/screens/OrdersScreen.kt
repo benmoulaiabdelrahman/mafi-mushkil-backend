@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,8 +30,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.OrderViewModel
+import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.models.Order
+import com.vardash.mafimushkil.models.SelectedCategory
 import com.vardash.mafimushkil.models.toEpochMillis
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
@@ -165,8 +169,10 @@ private fun border(width: androidx.compose.ui.unit.Dp, color: Color) = androidx.
 fun OrdersScreen(
     navController: NavController,
     orderViewModel: OrderViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel(),
     initialTab: Int = 0
 ) {
+    val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(initialTab) }
     val tabs = listOf(
         stringResource(R.string.orders_pending),
@@ -175,9 +181,10 @@ fun OrdersScreen(
 
     val pendingOrders by orderViewModel.pendingOrders.collectAsState()
     val completedOrders by orderViewModel.completedOrders.collectAsState()
+    val isLoaded by orderViewModel.isUserOrdersLoaded.collectAsState()
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadUserOrders()
+        orderViewModel.loadUserOrders(context)
     }
 
     // If initialTab changes (e.g. from deep link), update selectedTab
@@ -187,10 +194,35 @@ fun OrdersScreen(
 
     val currentList = if (selectedTab == 0) pendingOrders else completedOrders
 
+    OrdersScreenContent(
+        navController = navController,
+        profileViewModel = profileViewModel,
+        selectedTab = selectedTab,
+        onTabSelected = { selectedTab = it },
+        tabs = tabs,
+        currentList = currentList,
+        isLoaded = isLoaded
+    )
+}
+
+@Composable
+fun OrdersScreenContent(
+    navController: NavController,
+    profileViewModel: ProfileViewModel,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    tabs: List<String>,
+    currentList: List<Order>,
+    isLoaded: Boolean
+) {
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
-            AppBottomBar(navController = navController, selectedIndex = 1)
+            AppBottomBar(
+                navController = navController,
+                selectedRoute = Routes.Orders,
+                profileViewModel = profileViewModel
+            )
         }
     ) { paddingValues ->
         Column(
@@ -199,26 +231,14 @@ fun OrdersScreen(
                 .background(Color(0xFFF7F8FA))
                 .padding(bottom = paddingValues.calculateBottomPadding())
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-            ) {
+            Surface(color = Color.White) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
                 ) {
-                    Text(
+                    ScreenHeaderTitle(
                         text = stringResource(R.string.orders_title),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        fontFamily = Questv1FontFamily
+                        showDivider = false
                     )
                     TabRow(
                         selectedTabIndex = selectedTab,
@@ -236,7 +256,7 @@ fun OrdersScreen(
                         tabs.forEachIndexed { index, title ->
                             Tab(
                                 selected = selectedTab == index,
-                                onClick = { selectedTab = index },
+                                onClick = { onTabSelected(index) },
                                 text = {
                                     Text(
                                         text = title,
@@ -252,8 +272,13 @@ fun OrdersScreen(
                 }
             }
 
-            // Body — list or empty state
-            if (currentList.isEmpty()) {
+            if (!isLoaded) {
+                // Initial load: show a loading indicator instead of "Empty" state
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color.Black)
+                }
+            } else if (currentList.isEmpty()) {
+                // Body — empty state
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -292,6 +317,7 @@ fun OrdersScreen(
                     }
                 }
             } else {
+                // Body — list
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -305,6 +331,59 @@ fun OrdersScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Preview(showBackground = true, locale = "ar")
+@Composable
+fun OrdersScreenPreview() {
+    CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl
+    ) {
+        val navController = rememberNavController()
+        
+        // Mocking localized categories using the names that getLocalizedCategoryName() expects
+        val mockOrders = listOf(
+            Order(
+                orderId = "1",
+                categories = listOf(SelectedCategory(id = "cleaning", name = "cleaning", iconName = "cleaning")),
+                details = "أحتاج لتنظيف كامل للمنزل، بما في ذلك النوافذ والمطبخ.",
+                status = "pending",
+                createdAt = System.currentTimeMillis() - 1000 * 60 * 30 // 30 mins ago
+            ),
+            Order(
+                orderId = "2",
+                categories = listOf(
+                    SelectedCategory(id = "plumber", name = "plumber", iconName = "plumbing"),
+                    SelectedCategory(id = "repair", name = "repairing", iconName = "repair")
+                ),
+                details = "تسرب مياه في الحمام وكسر في مقبض المغسلة.",
+                status = "confirmed",
+                createdAt = System.currentTimeMillis() - 1000 * 60 * 60 * 2 // 2 hours ago
+            ),
+            Order(
+                orderId = "3",
+                categories = listOf(SelectedCategory(id = "pest_control", name = "pest_control", iconName = "cockroach")),
+                details = "مكافحة حشرات عامة للحديقة ومنطقة المرآب.",
+                status = "in_progress",
+                createdAt = System.currentTimeMillis() - 1000 * 60 * 60 * 24 // 1 day ago
+            )
+        )
+
+        MafiMushkilTheme {
+            OrdersScreenContent(
+                navController = navController,
+                profileViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+                selectedTab = 0,
+                onTabSelected = {},
+                tabs = listOf(
+                    stringResource(R.string.orders_pending),
+                    stringResource(R.string.orders_history)
+                ),
+                currentList = mockOrders,
+                isLoaded = true
+            )
         }
     }
 }
