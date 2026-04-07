@@ -1,31 +1,37 @@
 package com.vardash.mafimushkil.screens
 
 import android.app.Activity
-import androidx.compose.foundation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.Call
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Engineering
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Payment
+import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -34,782 +40,394 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
-import com.vardash.mafimushkil.Routes
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import coil.size.Size
 import com.vardash.mafimushkil.R
+import com.vardash.mafimushkil.Routes
 import com.vardash.mafimushkil.auth.OrderState
 import com.vardash.mafimushkil.auth.OrderViewModel
 import com.vardash.mafimushkil.auth.ProfileViewModel
 import com.vardash.mafimushkil.auth.UserProfile
 import com.vardash.mafimushkil.models.BookedService
 import com.vardash.mafimushkil.models.Order
+import com.vardash.mafimushkil.models.Payment
 import com.vardash.mafimushkil.models.SelectedCategory
 import com.vardash.mafimushkil.models.Worker
-import com.vardash.mafimushkil.models.toEpochMillis
 import com.vardash.mafimushkil.ui.theme.MafiMushkilTheme
 import com.vardash.mafimushkil.ui.theme.Questv1FontFamily
-import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.tooling.preview.Preview
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderDetailScreen(
-    navController: NavController,
     orderId: String,
+    navController: NavController,
     orderViewModel: OrderViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel()
 ) {
-    val pendingOrders by orderViewModel.pendingOrders.collectAsState()
-    val completedOrders by orderViewModel.completedOrders.collectAsState()
-    val selectedOrder by orderViewModel.selectedOrder.collectAsState()
+    val context = LocalContext.current
+    val order by orderViewModel.selectedOrder.collectAsState()
     val orderState by orderViewModel.orderState.collectAsState()
     val userProfile by profileViewModel.userProfile.collectAsState()
 
     LaunchedEffect(orderId) {
         orderViewModel.observeOrder(orderId)
-        profileViewModel.loadUserProfile()
+        profileViewModel.loadUserProfile(context)
     }
 
-    DisposableEffect(orderId) {
-        onDispose {
-            orderViewModel.clearObservedOrder()
-            orderViewModel.resetState()
+    DisposableEffect(Unit) {
+        onDispose { orderViewModel.clearObservedOrder() }
+    }
+
+    order?.let { currentOrder ->
+        OrderDetailContent(
+            navController = navController,
+            order = currentOrder,
+            orderState = orderState,
+            userProfile = userProfile,
+            onBack = { navController.popBackStack() }
+        )
+    } ?: run {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Color.Black)
         }
     }
-
-    val order = selectedOrder ?: (pendingOrders + completedOrders).find { it.orderId == orderId }
-
-    OrderDetailContent(
-        navController = navController,
-        order = order,
-        orderState = orderState,
-        userProfile = userProfile,
-        profileViewModel = profileViewModel,
-        onBack = { navController.popBackStack() },
-        onConfirmDetails = { orderViewModel.confirmOrderDetails(orderId) },
-        onViewWorkers = { },
-        onViewPayments = { navController.navigate(Routes.payments(orderId)) }
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OrderDetailContent(
+fun OrderDetailContent(
     navController: NavController,
-    order: Order?,
+    order: Order,
     orderState: OrderState,
     userProfile: UserProfile,
-    profileViewModel: ProfileViewModel = viewModel(),
-    onBack: () -> Unit,
-    onConfirmDetails: () -> Unit = {},
-    onViewWorkers: () -> Unit = {},
-    onViewPayments: () -> Unit = {}
+    onBack: () -> Unit
 ) {
-    val context = LocalContext.current
-    val density = LocalDensity.current
-    val view = LocalView.current
-    val helpSheetState = rememberModalBottomSheetState()
-    val confirmSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val workersSheetState = rememberModalBottomSheetState()
-    var showHelpSheet by remember { mutableStateOf(false) }
-    var showConfirmSheet by remember { mutableStateOf(false) }
+    val normalizedStatus = order.status.lowercase()
     var showFullDetailsDialog by remember { mutableStateOf(false) }
     var selectedImageUrl by remember { mutableStateOf<String?>(null) }
     var showWorkersSheet by remember { mutableStateOf(false) }
+    val view = LocalView.current
+    val subtotal = order.bookedServices.sumOf { it.price * it.quantity }
+    val baseTotal = when {
+        order.totalPrice > 0.0 -> order.totalPrice
+        subtotal > 0.0 -> subtotal + order.tax - order.discount
+        else -> 0.0
+    }.coerceAtLeast(0.0)
+    val displayTotal = if (order.totalPrice > 0.0) order.totalPrice else baseTotal
 
-    val modalBarsMode = when {
-        selectedImageUrl != null -> OrderDetailBarsMode.ImagePreview
-        showHelpSheet || showConfirmSheet || showWorkersSheet -> OrderDetailBarsMode.Sheet
-        else -> OrderDetailBarsMode.Normal
-    }
-    ApplyOrderDetailBars(mode = modalBarsMode, view = view)
-
-    if (order == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color.Black)
-        }
-        return
-    }
-
-    val status = order.status.lowercase()
-
-    LaunchedEffect(status) {
-        if (status == "confirmed") {
-            showConfirmSheet = false
-        }
-    }
+    ApplyOrderDetailBars(
+        mode = when {
+            selectedImageUrl != null -> OrderDetailBarsMode.ImagePreview
+            showWorkersSheet -> OrderDetailBarsMode.Sheet
+            else -> OrderDetailBarsMode.Normal
+        },
+        view = view
+    )
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
         containerColor = Color(0xFFF7F8FA),
-        bottomBar = {
-            if (status == "accepted") {
-                Surface(
-                    color = Color.Transparent,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .navigationBarsPadding(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFFFB74D).copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Outlined.ErrorOutline,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFFB74D),
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = "لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى مراجعتها ثم تأكيد التفاصيل.",
-                                fontSize = 13.sp,
-                                color = Color(0xFF1A1A1A),
-                                lineHeight = 18.sp,
-                                modifier = Modifier.weight(1f),
-                                fontFamily = Questv1FontFamily
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { showConfirmSheet = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = Color.Transparent,
-                                contentColor = Color(0xFF282828)
-                            ),
-                            border = BorderStroke(1.dp, Color(0xFF282828))
-                        ) {
-                            Text(
-                                text = "تأكيد التفاصيل",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                fontFamily = Questv1FontFamily
-                            )
-                        }
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Transparent)
-                ) {
-                    AppBottomBar(
-                        navController = navController,
-                        selectedRoute = Routes.Orders,
-                        profileViewModel = profileViewModel,
-                        containerColor = Color.Transparent
-                    )
-                }
-            }
-        },
-        contentWindowInsets = WindowInsets(0.dp)
-    ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(Color(0xFFF7F8FA))
+        topBar = {
+            Surface(
+                color = Color.White,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.back)
-                            )
-                        }
-                        Text(
-                            text = stringResource(R.string.order_detail_title),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 8.dp),
-                            fontFamily = Questv1FontFamily,
-                            textAlign = TextAlign.Center
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
                         )
-                        IconButton(
-                            onClick = { showHelpSheet = true },
-                            modifier = Modifier
-                                .border(1.2.dp, Color.Black, CircleShape)
-                                .size(34.dp)
-                        ) {
-                            Icon(
-                                Icons.Outlined.Phone,
-                                contentDescription = stringResource(R.string.order_detail_contact),
-                                modifier = Modifier.size(18.dp),
-                                tint = Color.Black
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
                     }
-                    HorizontalDivider(color = Color(0xFFF5F5F5))
+                    Text(
+                        text = stringResource(R.string.order_detail_title),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        fontFamily = Questv1FontFamily
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // ── Address Section ───────────────────────────
+            DetailSection {
+                Text(
+                    text = stringResource(R.string.order_detail_address),
+                    color = Color(0xFF888888),
+                    fontSize = 14.sp,
+                    fontFamily = Questv1FontFamily
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = order.address,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color(0xFF1A1A1A),
+                    lineHeight = 22.sp,
+                    fontFamily = Questv1FontFamily
+                )
+            }
+
+            // ── Services Section ──────────────────────────
+            DetailSection {
+                Text(
+                    text = stringResource(R.string.order_detail_service_type),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color(0xFF1A1A1A),
+                    fontFamily = Questv1FontFamily
+                )
+                Spacer(Modifier.height(16.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(end = 16.dp)
+                ) {
+                    items(order.categories) { cat ->
+                        ServiceItem(name = cat.name, iconRes = getCategoryIcon(cat.iconName))
+                    }
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
+            // ── Date Section ──────────────────────────────
+            DetailSection {
+                Text(
+                    text = stringResource(R.string.order_detail_date),
+                    color = Color(0xFF888888),
+                    fontSize = 14.sp,
+                    fontFamily = Questv1FontFamily
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = formatDisplayDate(Date(order.createdAt)),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color(0xFF1A1A1A),
+                    fontFamily = Questv1FontFamily
+                )
+            }
+
+            // ── Details Section ───────────────────────────
+            DetailSection {
+                Text(
+                    text = stringResource(R.string.order_detail_details),
+                    color = Color(0xFF888888),
+                    fontSize = 14.sp,
+                    fontFamily = Questv1FontFamily
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = order.details.ifBlank { stringResource(R.string.no_additional_details) },
+                    fontSize = 14.sp,
+                    color = Color(0xFF1A1A1A),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 20.sp,
+                    fontFamily = Questv1FontFamily
+                )
+                Text(
+                    text = stringResource(R.string.order_detail_show_more),
+                    color = Color(0xFF888888),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showFullDetailsDialog = true }
+                        .padding(vertical = 4.dp, horizontal = 8.dp),
+                    fontFamily = Questv1FontFamily
+                )
+            }
+
+            // ── Photos Section ────────────────────────────
+            if (order.photoUrls.isNotEmpty()) {
                 DetailSection {
+                    Text(
+                        text = stringResource(R.string.order_detail_attachments),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF1A1A1A),
+                        fontFamily = Questv1FontFamily
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(order.photoUrls) { url ->
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { selectedImageUrl = url },
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Booked Services Section ───────────────────
+            if (order.bookedServices.isNotEmpty()) {
+                DetailSection {
+                    Text(
+                        text = stringResource(R.string.booked_services_title),
+                        color = Color(0xFF888888),
+                        fontSize = 14.sp,
+                        fontFamily = Questv1FontFamily
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    order.bookedServices.forEach { service ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = if (service.quantity > 1) {
+                                    "${getLocalizedCategoryName(service.name)} ${stringResource(R.string.quantity_prefix)}${service.quantity}"
+                                } else {
+                                    getLocalizedCategoryName(service.name)
+                                },
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF1A1A1A),
+                                fontFamily = Questv1FontFamily
+                            )
+                            CurrencyAmount(amountText = formatPriceValue(service.price * service.quantity))
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
+                    if (order.discount > 0.0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = stringResource(R.string.booked_services_discount),
+                                color = Color(0xFF888888),
+                                fontFamily = Questv1FontFamily
+                            )
+                            CurrencyAmount(amountText = formatPriceValue(order.discount), prefix = "-")
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = stringResource(R.string.order_detail_status, getLocalizedStatus(order.status)),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            fontFamily = Questv1FontFamily
-                        )
-                        StatusBadge(status = order.status)
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = getStatusDescriptionLocalized(order.status),
-                        color = Color(0xFF888888),
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-
-                if (status == "pending") {
-                    DetailSection {
-                        Text(
-                            text = "تم إرسال الطلب",
-                            color = Color(0xFF888888),
-                            fontSize = 14.sp,
-                            fontFamily = Questv1FontFamily
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "تم إرسال طلبك بنجاح. لا يلزمك أي إجراء حالياً.",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            lineHeight = 22.sp,
-                            fontFamily = Questv1FontFamily
-                        )
-                    }
-                }
-
-                if (status == "cancelled" && order.cancellationReason.isNotBlank()) {
-                    DetailSection {
-                        Text(
-                            text = "سبب الإلغاء",
-                            color = Color(0xFF888888),
-                            fontSize = 14.sp,
-                            fontFamily = Questv1FontFamily
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = order.cancellationReason,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = Color(0xFFF44336),
-                            lineHeight = 22.sp,
-                            fontFamily = Questv1FontFamily
-                        )
-                    }
-                }
-
-                DetailSection {
-                    Text(
-                        text = stringResource(R.string.order_detail_address),
-                        color = Color(0xFF888888),
-                        fontSize = 14.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = order.address,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-
-                DetailSection {
-                    Text(
-                        text = stringResource(R.string.order_detail_service_type),
-                        color = Color(0xFF888888),
-                        fontSize = 14.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                    Spacer(Modifier.height(12.dp))
-
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(order.categories) { cat ->
-                            ServiceItem(cat.name, getCategoryIcon(cat.iconName))
-                        }
-                    }
-                }
-
-                DetailSection {
-                    Text(
-                        text = stringResource(R.string.order_detail_date),
-                        color = Color(0xFF888888),
-                        fontSize = 14.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    val date = Date(order.createdAt.toEpochMillis())
-                    val formattedDate = formatDisplayDate(date)
-                    Text(
-                        text = formattedDate,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-
-                DetailSection {
-                    Text(
-                        text = stringResource(R.string.order_detail_details),
-                        color = Color(0xFF888888),
-                        fontSize = 14.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = order.details,
-                        fontSize = 14.sp,
-                        color = Color(0xFF1A1A1A),
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 20.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                    Text(
-                        text = stringResource(R.string.order_detail_show_more),
-                        color = Color(0xFF888888),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .align(Alignment.End)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { showFullDetailsDialog = true }
-                            .padding(vertical = 4.dp, horizontal = 8.dp),
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-
-                if (order.photoUrls.isNotEmpty()) {
-                    DetailSection {
-                        Text(
-                            text = stringResource(R.string.order_detail_attachments),
-                            color = Color(0xFF888888),
-                            fontSize = 14.sp,
-                            fontFamily = Questv1FontFamily
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(order.photoUrls) { url ->
-                                AsyncImage(
-                                    model = url,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { selectedImageUrl = url },
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (status in listOf("accepted", "confirmed", "assigned", "in_progress", "completed") && order.bookedServices.isNotEmpty()) {
-                    DetailSection {
-                        Text(
-                            text = "الخدمات المحجوزة",
-                            color = Color(0xFF888888),
-                            fontSize = 14.sp,
-                            fontFamily = Questv1FontFamily
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        order.bookedServices.forEach { service ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = if (service.quantity > 1) "${service.name} x${service.quantity}" else service.name,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF1A1A1A),
-                                    fontFamily = Questv1FontFamily
-                                )
-                                CurrencyAmount(amountText = formatPriceValue(service.price * service.quantity))
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
-                        if (order.discount > 0.0) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("الخصم", color = Color(0xFF888888), fontFamily = Questv1FontFamily)
-                                CurrencyAmount(
-                                    amountText = formatPriceValue(order.discount),
-                                    fontWeight = FontWeight.Bold,
-                                    prefix = "-"
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("الإجمالي:", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFF1A1A1A), fontFamily = Questv1FontFamily)
-                            CurrencyAmount(amountText = formatPriceValue(order.totalPrice), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                        }
-                    }
-                }
-
-                if (status in listOf("assigned", "in_progress", "completed")) {
-                    ClickableSection(
-                        title = stringResource(R.string.order_detail_workers),
-                        onClick = {
-                            onViewWorkers()
-                            showWorkersSheet = true
-                        }
-                    )
-                }
-
-                if (status == "in_progress") {
-                    ClickableSection(
-                        title = stringResource(R.string.order_detail_payments),
-                        onClick = onViewPayments
-                    )
-                }
-
-                Spacer(Modifier.height(32.dp))
-            }
-        }
-    }
-
-    if (showHelpSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showHelpSheet = false },
-            sheetState = helpSheetState,
-            containerColor = Color.White,
-            dragHandle = null,
-            scrimColor = Color.Black.copy(alpha = 0.5f),
-            windowInsets = WindowInsets(0),
-            tonalElevation = 0.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 40.dp, top = 36.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(90.dp)
-                        .background(Color(0xFFFFD54F), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Outlined.Call,
-                        contentDescription = null,
-                        modifier = Modifier.size(45.dp),
-                        tint = Color.Black
-                    )
-                }
-                Spacer(Modifier.height(24.dp))
-                Text(
-                    text = stringResource(R.string.order_detail_help_title),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A),
-                    fontFamily = Questv1FontFamily
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                        text = if (status == "pending")
-                        stringResource(R.string.order_detail_help_desc)
-                    else
-                        "يمكنك التواصل معنا إذا كان لديك أي استفسار بخصوص طلبك.",
-                    fontSize = 15.sp,
-                    color = Color(0xFF888888),
-                    textAlign = TextAlign.Center,
-                    lineHeight = 22.sp,
-                    fontFamily = Questv1FontFamily
-                )
-                Spacer(Modifier.height(32.dp))
-                Button(
-                    onClick = { showHelpSheet = false },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.order_detail_contact),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-            }
-        }
-    }
-
-    if (showConfirmSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showConfirmSheet = false },
-            sheetState = confirmSheetState,
-            containerColor = Color.White,
-            dragHandle = null,
-            scrimColor = Color.Black.copy(alpha = 0.5f),
-            windowInsets = WindowInsets(0),
-            tonalElevation = 0.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 40.dp, top = 8.dp)
-            ) {
-                Text(
-                    text = "تأكيد التفاصيل",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A),
-                    fontFamily = Questv1FontFamily
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "يرجى مراجعة الخدمات المحجوزة قبل تأكيد تفاصيل الطلب.",
-                    fontSize = 15.sp,
-                    color = Color(0xFF888888),
-                    lineHeight = 22.sp,
-                    fontFamily = Questv1FontFamily
-                )
-                Spacer(Modifier.height(24.dp))
-
-                order.bookedServices.forEach { service ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = if (service.quantity > 1) "${service.name} x${service.quantity}" else service.name,
-                            fontWeight = FontWeight.Medium,
+                            text = stringResource(R.string.booked_services_total),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp,
                             color = Color(0xFF1A1A1A),
                             fontFamily = Questv1FontFamily
                         )
-                        CurrencyAmount(amountText = formatPriceValue(service.price * service.quantity))
-                    }
-                }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFEEEEEE))
-                if (order.discount > 0.0) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("الخصم", color = Color(0xFF888888), fontFamily = Questv1FontFamily)
                         CurrencyAmount(
-                            amountText = formatPriceValue(order.discount),
-                            fontWeight = FontWeight.Bold,
-                            prefix = "-"
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("الإجمالي", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color(0xFF1A1A1A), fontFamily = Questv1FontFamily)
-                    CurrencyAmount(amountText = formatPriceValue(order.totalPrice), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                }
-
-                if (orderState is OrderState.Error) {
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = orderState.message,
-                        color = Color(0xFFF44336),
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        fontFamily = Questv1FontFamily
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-                Button(
-                    onClick = onConfirmDetails,
-                    enabled = orderState !is OrderState.Loading,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    if (orderState is OrderState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text(
-                            text = "تأكيد التفاصيل",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            fontFamily = Questv1FontFamily
+                            amountText = formatPriceValue(displayTotal),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp
                         )
                     }
                 }
             }
+
+            // ── Workers Section ───────────────────────────
+            if (order.displayWorkers.isNotEmpty()) {
+                ClickableSection(
+                    title = stringResource(R.string.workers_and_assistants_title)
+                ) {
+                    showWorkersSheet = true
+                }
+            }
+
+            // ── Payment Section ──────────────────────────
+            val clearedAmount = order.payments.filter { it.isCleared() }.sumOf { it.amount }
+            val remainingAmount = (displayTotal - clearedAmount).coerceAtLeast(0.0)
+            if (normalizedStatus == "in_progress" && (remainingAmount > 0.0 || order.payments.isNotEmpty())) {
+                ClickableSection(
+                    title = stringResource(R.string.order_detail_payments)
+                ) {
+                    navController.navigate(Routes.payments(order.orderId))
+                }
+            }
+
+            Spacer(Modifier.height(32.dp))
         }
     }
 
     if (showWorkersSheet) {
         ModalBottomSheet(
             onDismissRequest = { showWorkersSheet = false },
-            sheetState = workersSheetState,
             containerColor = Color.White,
-            dragHandle = null,
-            scrimColor = Color.Black.copy(alpha = 0.5f),
-            windowInsets = WindowInsets(0),
-            tonalElevation = 0.dp
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFFDDDDDD)) }
         ) {
-            @Suppress("DEPRECATION")
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .padding(bottom = 40.dp, top = 8.dp)
-                ) {
+                    .padding(bottom = 32.dp)
+            ) {
+                @Suppress("DEPRECATION")
                 Text(
-                    text = stringResource(R.string.order_detail_workers),
-                    fontSize = 22.sp,
+                    text = stringResource(R.string.order_detail_workers_list),
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A1A1A),
                     fontFamily = Questv1FontFamily
                 )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "تم تعيين الفريق التالي لتنفيذ طلبك.",
-                    fontSize = 15.sp,
-                    color = Color(0xFF888888),
-                    lineHeight = 22.sp,
-                    fontFamily = Questv1FontFamily
-                )
                 Spacer(Modifier.height(24.dp))
                 order.displayWorkers.forEachIndexed { index, worker ->
-                    // Use live profile info if the worker is the current user
-                    val isCurrentUser = worker.id == userProfile.uid
-                    val displayPhotoUrl = if (isCurrentUser && userProfile.profilePhoto.isNotEmpty()) userProfile.profilePhoto else worker.photoUrl
-                    val displayScale = if (isCurrentUser && userProfile.profilePhoto.isNotEmpty()) userProfile.photoScale else worker.photoScale
-                    val displayOffsetX = if (isCurrentUser && userProfile.profilePhoto.isNotEmpty()) userProfile.photoOffsetX else worker.photoOffsetX
-                    val displayOffsetY = if (isCurrentUser && userProfile.profilePhoto.isNotEmpty()) userProfile.photoOffsetY else worker.photoOffsetY
-
-                    var avatarAspectRatio by remember(worker.id, displayPhotoUrl) { mutableFloatStateOf(1f) }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFE0E0E0)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (displayPhotoUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(displayPhotoUrl)
-                                        .size(Size.ORIGINAL)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .graphicsLayer {
-                                            val pushFactor = 52f / 280f
-                                            val minScale = if (avatarAspectRatio > 1f) avatarAspectRatio else 1f / avatarAspectRatio
-                                            scaleX = displayScale * minScale
-                                            scaleY = displayScale * minScale
-                                            translationX = displayOffsetX * density.density * pushFactor
-                                            translationY = displayOffsetY * density.density * pushFactor
-                                        },
-                                    onSuccess = { state ->
-                                        avatarAspectRatio = state.painter.intrinsicSize.width / state.painter.intrinsicSize.height
-                                    },
-                                    contentScale = ContentScale.Fit
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = Color(0xFF9E9E9E),
-                                    modifier = Modifier.size(32.dp)
-                                )
+                        if (worker.photoUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = worker.photoUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFF5F5F5)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = null, tint = Color(0xFFCCCCCC))
                             }
                         }
-                        Spacer(Modifier.width(14.dp))
+                        Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = worker.name,
@@ -819,7 +437,7 @@ private fun OrderDetailContent(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = worker.services.ifBlank { "خدمة غير محددة" },
+                                text = worker.services.ifBlank { stringResource(R.string.order_detail_service_not_defined) },
                                 color = Color(0xFF888888),
                                 fontSize = 13.sp,
                                 fontFamily = Questv1FontFamily
@@ -841,7 +459,7 @@ private fun OrderDetailContent(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "إغلاق",
+                        text = stringResource(R.string.close),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontFamily = Questv1FontFamily
@@ -872,6 +490,7 @@ private fun OrderDetailContent(
                             .background(Color(0xFFCCFF00))
                             .padding(horizontal = 20.dp, vertical = 16.dp)
                     ) {
+                        @Suppress("DEPRECATION")
                         Text(
                             text = stringResource(R.string.order_detail_details),
                             fontWeight = FontWeight.Bold,
@@ -1165,6 +784,9 @@ fun ServiceItem(name: String, iconRes: Int) {
     }
 }
 
+private fun Payment.isCleared(): Boolean =
+    status.lowercase() in setOf("paid", "cleared", "completed")
+
 @Composable
 fun getStatusDescriptionLocalized(status: String): String = when (status.lowercase()) {
     "pending" -> stringResource(R.string.desc_pending)
@@ -1244,7 +866,7 @@ fun OrderDetailScreenPreview() {
                 address = "123 Main St, Dubai",
                 details = "أحتاج إلى تنظيف عميق لشقتي المكونة من غرفتي نوم وصالة. كما أحتاج إلى إصلاح مفتاح إضاءة في المطبخ.",
                 photoUrls = listOf("https://via.placeholder.com/150"),
-                createdAt = Timestamp.now(),
+                createdAt = System.currentTimeMillis(),
                 bookedServices = listOf(
                     BookedService(name = "Cleaning", price = 100.0),
                     BookedService(name = "Repairing", price = 50.0)

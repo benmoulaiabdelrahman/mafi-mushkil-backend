@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +57,7 @@ fun HomeScreen(
     var isMenuVisible by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var homeLaidOut by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     
     val categoriesFromVm by orderViewModel.categories.collectAsState()
     val categoriesReady by orderViewModel.categoriesReady.collectAsState()
@@ -85,7 +87,7 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         // Skip Firebase interaction in Preview
         if (!isInspectionMode) {
-            orderViewModel.loadCategories()
+            orderViewModel.loadCategories(context)
         }
     }
 
@@ -236,11 +238,14 @@ fun HomeScreen(
                     fontFamily = Questv1FontFamily
                 )
 
-                if (isLoading && !isInspectionMode) {
+                val showBlockingLoading = isLoading && categories.isEmpty() && !isInspectionMode
+                val showBlockingError = error != null && categories.isEmpty() && !isInspectionMode
+
+                if (showBlockingLoading) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color.Black)
                     }
-                } else if (error != null && !isInspectionMode) {
+                } else if (showBlockingError) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Error: $error", color = Color.Red, fontFamily = Questv1FontFamily)
                     }

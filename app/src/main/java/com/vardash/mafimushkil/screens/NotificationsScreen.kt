@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -70,7 +71,7 @@ fun notificationColor(type: NotificationType): Color = when (type) {
     NotificationType.ORDER_CONFIRMED -> Color(0xFF7C3AED)
     NotificationType.ORDER_ASSIGNED  -> Color(0xFF2196F3)
     NotificationType.ORDER_COMPLETED -> Color(0xFF4CAF50)
-    NotificationType.ORDER_CANCELLED -> Color(0xFFF44336)
+    NotificationType.ORDER_CANCELLED -> Color(0xFF4336)
     NotificationType.ANNOUNCEMENT    -> Color(0xFF282828)
 }
 
@@ -174,6 +175,7 @@ fun NotificationCard(
 
             // Middle: title + message
             Column(modifier = Modifier.weight(1f)) {
+                @Suppress("DEPRECATION")
                 Text(
                     text = buildAnnotatedString {
                         append(notification.title + " ")
@@ -225,13 +227,15 @@ fun NotificationsScreen(
     orderViewModel: OrderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     profileViewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    val context = LocalContext.current
     val pendingOrders by orderViewModel.pendingOrders.collectAsState()
     val completedOrders by orderViewModel.completedOrders.collectAsState()
+    val isLoaded by orderViewModel.isUserOrdersLoaded.collectAsState()
     val notifications = buildNotifications(pendingOrders + completedOrders)
     var hasMarkedSeen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadUserOrders()
+        orderViewModel.loadUserOrders(context)
     }
 
     LaunchedEffect(notifications.firstOrNull()?.sortKey, notifications.size) {
@@ -245,6 +249,7 @@ fun NotificationsScreen(
         navController = navController,
         profileViewModel = profileViewModel,
         notifications = notifications,
+        isLoaded = isLoaded,
         onNotificationClick = { notification ->
             orderViewModel.markNotificationsSeen()
             hasMarkedSeen = true
@@ -266,6 +271,7 @@ fun NotificationsScreenContent(
     navController: NavController,
     profileViewModel: ProfileViewModel,
     notifications: List<AppNotification>,
+    isLoaded: Boolean,
     onNotificationClick: (AppNotification) -> Unit
 ) {
     Scaffold(
@@ -298,7 +304,12 @@ fun NotificationsScreenContent(
             }
 
             // ── Body: list or empty state ─────────────────────
-            if (notifications.isEmpty()) {
+            val shouldShowLoading = !isLoaded && notifications.isEmpty()
+            if (shouldShowLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color.Black)
+                }
+            } else if (notifications.isEmpty()) {
                 // Empty state
                 Box(
                     modifier = Modifier
@@ -317,6 +328,7 @@ fun NotificationsScreenContent(
                             contentScale = ContentScale.Fit
                         )
                         Spacer(Modifier.height(24.dp))
+                        @Suppress("DEPRECATION")
                         Text(
                             text = stringResource(R.string.notifications_empty_title),
                             fontSize = 20.sp,
@@ -325,6 +337,7 @@ fun NotificationsScreenContent(
                             fontFamily = Questv1FontFamily
                         )
                         Spacer(Modifier.height(8.dp))
+                        @Suppress("DEPRECATION")
                         Text(
                             text = stringResource(R.string.notifications_empty_desc),
                             fontSize = 14.sp,
@@ -398,6 +411,7 @@ fun NotificationsScreenPreview() {
                 navController = rememberNavController(),
                 profileViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
                 notifications = mockNotifications,
+                isLoaded = true,
                 onNotificationClick = {}
             )
         }

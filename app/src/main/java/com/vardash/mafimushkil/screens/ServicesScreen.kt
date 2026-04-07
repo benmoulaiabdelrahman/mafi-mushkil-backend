@@ -1,6 +1,4 @@
 package com.vardash.mafimushkil.screens
-
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -111,6 +109,7 @@ fun ServicesScreen(
                                 selected = selectedTab == index,
                                 onClick = { selectedTab = index },
                                 text = {
+                                    @Suppress("DEPRECATION")
                                     Text(
                                         text = title,
                                         fontSize = 15.sp,
@@ -127,11 +126,12 @@ fun ServicesScreen(
 
             when (selectedTab) {
                 0, 1 -> {
-                    if (!isLoaded) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Color.Black)
-                        }
-                    } else if (currentList.isEmpty()) {
+                val shouldShowLoading = !isLoaded && currentList.isEmpty()
+                if (shouldShowLoading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color.Black)
+                    }
+                } else if (currentList.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -220,6 +220,7 @@ private fun ServiceOrderCard(
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
+        @Suppress("DEPRECATION")
         Text(
             text = order.details.ifBlank { stringResource(R.string.services_no_description) },
             fontSize = 15.sp,
@@ -230,22 +231,25 @@ private fun ServiceOrderCard(
             lineHeight = 21.sp,
             fontFamily = Questv1FontFamily
         )
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Outlined.AccessTime,
-                contentDescription = null,
-                tint = Color(0xFFAAAAAA),
-                modifier = Modifier.size(14.dp)
-            )
-            Spacer(Modifier.width(4.dp))
-            @Suppress("DEPRECATION")
-            Text(
-                text = formatTimeAgoLocalized(order.createdAt),
-                fontSize = 12.sp,
-                color = Color(0xFFAAAAAA),
-                fontFamily = Questv1FontFamily
-            )
+        val timeAgo = formatTimeAgoLocalized(order.createdAt)
+        if (timeAgo.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Outlined.AccessTime,
+                    contentDescription = null,
+                    tint = Color(0xFFAAAAAA),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                @Suppress("DEPRECATION")
+                Text(
+                    text = timeAgo,
+                    fontSize = 12.sp,
+                    color = Color(0xFFAAAAAA),
+                    fontFamily = Questv1FontFamily
+                )
+            }
         }
     }
     HorizontalDivider(color = Color(0xFFF5F5F5), thickness = 1.dp)
@@ -257,7 +261,6 @@ private fun ServiceBalanceScreen(
     totalEarnings: Double,
     completedOrdersCount: Int
 ) {
-    val context = LocalContext.current
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -297,28 +300,6 @@ private fun ServiceBalanceScreen(
                     color = Color(0xFF8E8E8E),
                     fontFamily = Questv1FontFamily
                 )
-                Spacer(Modifier.height(20.dp))
-                val withdrawLabel = stringResource(R.string.services_withdraw_button)
-                Button(
-                    onClick = {
-                        Toast.makeText(context, withdrawLabel, Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF282828),
-                        contentColor = Color.White
-                    )
-                ) {
-                    @Suppress("DEPRECATION")
-                    Text(
-                        text = withdrawLabel,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = Questv1FontFamily
-                    )
-                }
             }
         }
         item {

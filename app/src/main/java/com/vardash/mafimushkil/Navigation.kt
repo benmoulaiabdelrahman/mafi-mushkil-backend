@@ -341,7 +341,12 @@ fun AppNavigation(
             )
         ) { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
-            OrderDetailScreen(navController, orderId, orderViewModel, profileViewModel)
+            OrderDetailScreen(
+                orderId = orderId,
+                navController = navController,
+                orderViewModel = orderViewModel,
+                profileViewModel = profileViewModel
+            )
         }
         composable(
             route = "${Routes.Payments}/{orderId}",

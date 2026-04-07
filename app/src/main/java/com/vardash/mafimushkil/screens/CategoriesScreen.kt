@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -48,16 +50,22 @@ fun CategoriesScreen(
     isAdding: Boolean = false,
     orderViewModel: OrderViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val categories by orderViewModel.categories.collectAsState()
+    val isLoading by orderViewModel.isLoading.collectAsState()
+    val isInspectionMode = LocalInspectionMode.current
 
     LaunchedEffect(Unit) {
-        orderViewModel.loadCategories()
+        if (!isInspectionMode) {
+            orderViewModel.loadCategories(context)
+        }
     }
 
     CategoriesScreenContent(
         navController = navController,
         isAdding = isAdding,
         categories = categories,
+        isLoading = isLoading,
         onCategoryClick = { category ->
             if (isAdding) {
                 // ✅ Mode: ADDING - use individual stable strings to return result
@@ -83,6 +91,7 @@ fun CategoriesScreenContent(
     navController: NavController,
     isAdding: Boolean,
     categories: List<Category>,
+    isLoading: Boolean = false,
     onCategoryClick: (Category) -> Unit
 ) {
     Column(
@@ -121,50 +130,56 @@ fun CategoriesScreenContent(
             }
         }
 
-        // ── Categories grid ───────────────────────────────
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(categories) { category ->
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                    border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onCategoryClick(category) }
-                ) {
-                    Column(
+        if (isLoading && categories.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color.Black)
+            }
+        } else {
+            // ── Categories grid ───────────────────────────────
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(categories) { category ->
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { onCategoryClick(category) }
                     ) {
-                        Image(
-                            painter = painterResource(id = getCategoryIcon(category.iconName)),
-                            contentDescription = category.name,
-                            modifier = Modifier.size(42.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        @Suppress("DEPRECATION")
-                        Text(
-                            text = getLocalizedCategoryName(category.name),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF282828),
-                            textAlign = TextAlign.Center,
-                            fontFamily = Questv1FontFamily,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = getCategoryIcon(category.iconName)),
+                                contentDescription = category.name,
+                                modifier = Modifier.size(42.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            @Suppress("DEPRECATION")
+                            Text(
+                                text = getLocalizedCategoryName(category.name),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF282828),
+                                textAlign = TextAlign.Center,
+                                fontFamily = Questv1FontFamily,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

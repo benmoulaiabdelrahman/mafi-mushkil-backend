@@ -118,7 +118,7 @@
     <string name="services_title">خدماتي</string>
     <string name="services_tab_services">الخدمات</string>
     <string name="services_tab_history">السجل</string>
-    <string name="services_tab_balance">الرصيد</string>
+    <string name="services_tab_balance">الأرباح</string>
     <string name="services_empty_active">لا توجد طلبات خدمات نشطة بعد.</string>
     <string name="services_empty_active_title">لا يوجد خدمات نشطة</string>
     <string name="services_empty_active_desc">ابدأ بتأكيد الطلبات لتظهر هنا.</string>
@@ -128,10 +128,6 @@
     <string name="services_no_description">لا يوجد وصف</string>
     <string name="services_balance_title">إجمالي الأرباح</string>
     <string name="services_balance_subtitle">%1$d طلبات مكتملة</string>
-    <string name="services_withdraw_button">سحب</string>
-    <string name="services_withdraw_title">السحب</string>
-    <string name="services_withdraw_chargily">السحب عبر Chargily</string>
-    <string name="services_withdraw_later">السحب لاحقاً</string>
     <string name="services_locate_on_map">تحديد على الخريطة</string>
     <string name="revoke_goodbye_title">وداعاً مؤقتاً</string>
     <string name="revoke_worker_subtitle">سيتم حذف تسجيلك كعامل وستعود إلى حساب عادي.</string>
@@ -159,6 +155,7 @@
 
     <!-- Order Detail -->
     <string name="order_detail_title">تفاصيل الطلب</string>
+    <string name="order_detail_number">الطلب</string>
     <string name="order_detail_status">حالة الطلب: %1$s</string>
     <string name="order_detail_address">العنوان:</string>
     <string name="order_detail_service_type">نوع الخدمة</string>
@@ -173,8 +170,29 @@
     <string name="order_detail_call_client_desc">يمكنك الاتصال بالعميل مباشرة من هاتفك.</string>
     <string name="order_detail_call_client_unavailable">رقم هاتف العميل غير متوفر حاليا.</string>
     <string name="order_detail_call_client_button">اتصل الآن</string>
+    <string name="order_detail_services">الخدمات</string>
+    <string name="order_detail_workers_assigned">تم تعيين %1$d عامل</string>
+    <string name="order_detail_workers_list">العمال المعينون</string>
+    <string name="order_detail_photos">الصور</string>
+    <string name="order_detail_price_summary">ملخص الأسعار</string>
+    <string name="order_detail_tax">الضريبة</string>
+    <string name="order_detail_total">الإجمالي</string>
     <string name="order_detail_workers">العمال والمساعدون</string>
     <string name="order_detail_payments">الدفع</string>
+    <string name="order_detail_booked_services">الخدمات المحجوزة</string>
+    <string name="order_detail_confirm_warning">لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى التأكيد من خلال زر التفاصيل.</string>
+    <string name="order_detail_confirm_button">تأكيد التفاصيل</string>
+    <string name="order_detail_payment_note">اضغط على الزر أدناه للانتقال إلى شاشة الدفع.</string>
+    <string name="order_detail_payment_amount_due">المبلغ المستحق</string>
+    <string name="order_detail_pay_now">ادفع الآن</string>
+    <string name="order_detail_service_not_defined">خدمة غير محددة</string>
+    <string name="no_additional_details">لا توجد تفاصيل إضافية</string>
+    <string name="booked_services_title">الخدمات المحجوزة</string>
+    <string name="booked_services_discount">الخصم</string>
+    <string name="booked_services_total">الإجمالي:</string>
+    <string name="workers_and_assistants_title">العمال والمساعدون</string>
+    <string name="workers_assigned_description">تم تعيين الفريق التالي لتنفيذ طلبك.</string>
+    <string name="quantity_prefix">x</string>
 
     <!-- Order Status Descriptions -->
     <string name="desc_pending">لقد تلقينا طلبك وسنعاود الاتصال بك بمجرد مراجعة الطلب.</string>

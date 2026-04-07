@@ -71,10 +71,6 @@ fun PaymentsScreen(
         orderViewModel.observeOrder(orderId)
     }
 
-    DisposableEffect(orderId) {
-        onDispose { orderViewModel.clearObservedOrder() }
-    }
-
     val order = selectedOrder ?: (pendingOrders + completedOrders).find { it.orderId == orderId }
 
     // ── Payment availability logic ──────────────────────────────────────────

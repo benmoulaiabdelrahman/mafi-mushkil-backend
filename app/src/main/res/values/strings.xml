@@ -118,7 +118,7 @@
     <string name="services_title">My services</string>
     <string name="services_tab_services">Services</string>
     <string name="services_tab_history">History</string>
-    <string name="services_tab_balance">Balance</string>
+    <string name="services_tab_balance">Earnings</string>
     <string name="services_empty_active">No active service orders yet.</string>
     <string name="services_empty_active_title">No active services</string>
     <string name="services_empty_active_desc">Start accepting bookings to see them listed here.</string>
@@ -128,10 +128,6 @@
     <string name="services_no_description">No description available</string>
     <string name="services_balance_title">Total earnings</string>
     <string name="services_balance_subtitle">%1$d completed orders</string>
-    <string name="services_withdraw_button">Withdraw</string>
-    <string name="services_withdraw_title">Withdrawals</string>
-    <string name="services_withdraw_chargily">Withdraw via Chargily</string>
-    <string name="services_withdraw_later">Withdraw later</string>
     <string name="services_locate_on_map">Locate on Map</string>
     <string name="revoke_goodbye_title">Goodbye for now</string>
     <string name="revoke_worker_subtitle">This will remove your worker registration and return your account to a regular user.</string>
@@ -163,6 +159,7 @@
 
     <!-- Order Detail -->
     <string name="order_detail_title">Order Details</string>
+    <string name="order_detail_number">Order</string>
     <string name="order_detail_status">Order status: %1$s</string>
     <string name="order_detail_address">Address:</string>
     <string name="order_detail_service_type">Service type</string>
@@ -177,11 +174,29 @@
     <string name="order_detail_call_client_desc">You can call the client directly from your phone.</string>
     <string name="order_detail_call_client_unavailable">The client phone number is not available right now.</string>
     <string name="order_detail_call_client_button">Call now</string>
-    <string name="order_detail_workers">العمال والمساعدون</string>
-    <string name="order_detail_payments">الدفع</string>
-    <string name="order_detail_booked_services">الخدمات المحجوزة</string>
-    <string name="order_detail_confirm_warning">لقد أضفنا الخدمات والأسعار إلى طلبك. يرجى التأكيد عبر زر `تأكيد التفاصيل`.</string>
-    <string name="order_detail_confirm_button">تأكيد التفاصيل</string>
+    <string name="order_detail_services">Services</string>
+    <string name="order_detail_workers_assigned">%1$d workers assigned</string>
+    <string name="order_detail_workers_list">Assigned workers</string>
+    <string name="order_detail_photos">Photos</string>
+    <string name="order_detail_price_summary">Price summary</string>
+    <string name="order_detail_tax">Tax</string>
+    <string name="order_detail_total">Total</string>
+    <string name="order_detail_workers">Workers and assistants</string>
+    <string name="order_detail_payments">Payment</string>
+    <string name="order_detail_booked_services">Booked services</string>
+    <string name="order_detail_confirm_warning">We added the services and prices to your order. Please confirm by tapping Details.</string>
+    <string name="order_detail_confirm_button">Confirm details</string>
+    <string name="order_detail_payment_note">Tap the button below to continue to the payment screen.</string>
+    <string name="order_detail_payment_amount_due">Amount due</string>
+    <string name="order_detail_pay_now">Pay now</string>
+    <string name="order_detail_service_not_defined">Service not specified</string>
+    <string name="no_additional_details">No additional details</string>
+    <string name="booked_services_title">Booked services</string>
+    <string name="booked_services_discount">Discount</string>
+    <string name="booked_services_total">Total:</string>
+    <string name="workers_and_assistants_title">Workers and assistants</string>
+    <string name="workers_assigned_description">The following team has been assigned to handle your order.</string>
+    <string name="quantity_prefix">x</string>
 
     <!-- Order Status Descriptions -->
     <string name="desc_pending">لقد تلقينا طلبك وسنعاود الاتصال بك بمجرد مراجعة الطلب.</string>

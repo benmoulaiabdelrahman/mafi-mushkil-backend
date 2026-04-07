@@ -129,10 +129,19 @@ open class OrderViewModel : ViewModel() {
         initialCategoryIdAdded = null
     }
 
-    fun loadCategories() {
+    fun loadCategories(context: Context? = null) {
         viewModelScope.launch {
+            val cachedCategories = context?.let { SessionManager(it).getCategories() }.orEmpty()
+            if (cachedCategories.isNotEmpty()) {
+                _categories.value = cachedCategories
+                _categoriesReady.value = true
+            }
+
+            val shouldShowLoading = cachedCategories.isEmpty() && _categories.value.isEmpty()
             _categoriesReady.value = false
-            _isLoading.value = true
+            if (shouldShowLoading) {
+                _isLoading.value = true
+            }
             _error.value = null
             try {
                 val snapshot = firestore.collection("categories")
@@ -146,12 +155,15 @@ open class OrderViewModel : ViewModel() {
                     _categories.value = snapshot.documents.mapNotNull { doc ->
                         doc.toObject(Category::class.java)?.copy(id = doc.id)?.withFixedIcon()
                     }
+                    context?.let { SessionManager(it).saveCategories(_categories.value) }
                 }
             } catch (e: Exception) {
                 Log.e("OrderViewModel", "Error loading categories: ${e.message}", e)
                 _error.value = e.message
             } finally {
-                _isLoading.value = false
+                if (shouldShowLoading) {
+                    _isLoading.value = false
+                }
                 _categoriesReady.value = true
             }
         }

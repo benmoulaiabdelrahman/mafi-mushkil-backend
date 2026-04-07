@@ -26,6 +26,7 @@ class PromotionViewModel : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private var hasLoadedPromotions = false
 
     fun loadPromotions(context: Context? = null) {
         // Initial load from cache if available
@@ -37,12 +38,16 @@ class PromotionViewModel : ViewModel() {
         }
 
         promotionsListener?.remove()
-        _isLoading.value = true
+        val hasData = _promotions.value.isNotEmpty()
+        hasLoadedPromotions = hasLoadedPromotions || hasData
+        val shouldShowLoading = !hasLoadedPromotions
+        _isLoading.value = shouldShowLoading
 
         promotionsListener = firestore.collection("promotions")
             .whereEqualTo("isActive", true)
             .addSnapshotListener { snapshot, error ->
                 _isLoading.value = false
+                hasLoadedPromotions = true
                 if (error != null) {
                     Log.e("PromotionViewModel", "Listen failed: ${error.message}")
                     return@addSnapshotListener

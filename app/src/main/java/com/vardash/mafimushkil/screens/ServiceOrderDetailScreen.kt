@@ -90,7 +90,7 @@ fun ServiceOrderDetailScreen(
 
     LaunchedEffect(orderId) {
         orderViewModel.observeOrder(orderId)
-        orderViewModel.loadServiceOrders()
+        orderViewModel.loadServiceOrders(context)
     }
 
     DisposableEffect(orderId) {
@@ -409,7 +409,7 @@ fun ServiceOrderMapScreen(
 
     LaunchedEffect(orderId) {
         orderViewModel.observeOrder(orderId)
-        orderViewModel.loadServiceOrders()
+        orderViewModel.loadServiceOrders(context)
     }
 
     DisposableEffect(orderId) {

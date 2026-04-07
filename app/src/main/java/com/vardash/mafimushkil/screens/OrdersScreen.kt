@@ -55,6 +55,8 @@ fun statusColor(status: String): Color = when (status.lowercase()) {
 @Composable
 fun formatTimeAgoLocalized(timestamp: Any?): String {
     val timestampMillis = timestamp.toEpochMillis()
+    if (timestampMillis <= 0L) return "..."
+
     val now = System.currentTimeMillis()
     val diff = now - timestampMillis
     
@@ -93,6 +95,7 @@ fun OrderCard(order: Order, onClick: () -> Unit) {
         ) {
             // Left: title + description
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                @Suppress("DEPRECATION")
                 Text(
                     text = run {
                         val maxVisible = 3
@@ -110,6 +113,7 @@ fun OrderCard(order: Order, onClick: () -> Unit) {
                     fontFamily = Questv1FontFamily
                 )
                 Spacer(Modifier.height(8.dp))
+                @Suppress("DEPRECATION")
                 Text(
                     text = order.details,
                     fontSize = 14.sp,
@@ -129,6 +133,7 @@ fun OrderCard(order: Order, onClick: () -> Unit) {
                     border = border(1.dp, statusColor(order.status).copy(alpha = 0.5f)),
                     color = Color.Transparent
                 ) {
+                    @Suppress("DEPRECATION")
                     Text(
                         text = getLocalizedStatus(order.status),
                         fontSize = 13.sp,
@@ -150,6 +155,7 @@ fun OrderCard(order: Order, onClick: () -> Unit) {
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(Modifier.width(4.dp))
+                    @Suppress("DEPRECATION")
                     Text(
                         text = formatTimeAgoLocalized(order.createdAt),
                         fontSize = 12.sp,
@@ -258,6 +264,7 @@ fun OrdersScreenContent(
                                 selected = selectedTab == index,
                                 onClick = { onTabSelected(index) },
                                 text = {
+                                    @Suppress("DEPRECATION")
                                     Text(
                                         text = title,
                                         fontSize = 15.sp,
@@ -272,7 +279,8 @@ fun OrdersScreenContent(
                 }
             }
 
-            if (!isLoaded) {
+            val shouldShowLoading = !isLoaded && currentList.isEmpty()
+            if (shouldShowLoading) {
                 // Initial load: show a loading indicator instead of "Empty" state
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color.Black)
